@@ -74,6 +74,25 @@ global int glob::trading_session_price;
     );
 }
 
+() send_jetton_ordinary(slice ctx_smc_jw, slice to_owner_address, int jetton_amount, int query_id) impure inline {
+    builder message = 
+        begin_cell()
+            .store_uint(BOUNCEABLE, 6)
+            .store_slice(ctx_smc_jw)
+            .store_coins(50000000)          ;; 0.05 TON
+            .store_prefix_only_body()
+            .store_op(op::jetton::transfer) 
+            .store_query_id(query_id)
+
+            .store_coins(jetton_amount)
+            .store_slice(to_owner_address)  ;; to_owner_address
+            .store_uint(0, 2)               ;; response_address
+            .store_int(0, 1)                ;; empty custom_payload
+            .store_coins(0)                 ;; forward amount to new_owner_address
+            .store_int(0, 1);               ;; empty forward_payload
+    send_raw_message(message.end_cell(), SEND_MODE_PAY_FEES_SEPARATELY);
+}
+
 slice construct_std_addr(int std_addr) inline {
     return (
         begin_cell()
@@ -86,45 +105,68 @@ slice construct_std_addr(int std_addr) inline {
 }
 
 ( cell, int, cell, int) extract_asks_bids(int priority) {
-    (cell ctx_priority_queues, int ok) = glob::porder_queues.udict_get_ref?(ORDER_QUEUES_KEY_LEN, priority);
+    (slice ctx_priority_queues, int ok) = glob::porder_queues.udict_get?(ORDER_QUEUES_KEY_LEN, priority);
     throw_unless(51, ok);
-
-    cell ctx_queues  = ctx_priority_queues~load_ref();
-
-    slice queues_slice = ctx_queues.begin_parse();
     return (
-        queues_slice~load_uint(ASK\BIDS_NUMBER_LEN),
-        queues_slice~load_dict(), 
-        queues_slice~load_uint(ASK\BIDS_NUMBER_LEN),
-        queues_slice~load_dict()
+        ctx_priority_queues~load_uint(ASKS\BIDS_NUMBER_LEN),
+        ctx_priority_queues~load_dict(), 
+        ctx_priority_queues~load_uint(ASKS\BIDS_NUMBER_LEN),
+        ctx_priority_queues~load_dict()
     );
 }
 
 () pack_asks_bids(int priority, cell asks, int asks_number, cell bids, int bids_number) impure {
-    glob::porder_queues.udict_set_ref(
+    glob::porder_queues.udict_set_builder(
         ORDER_QUEUES_KEY_LEN, priority, 
-        begin_cell()
-            .store_ref(
-                begin_cell()
-                    .store_uint(asks_number, ASK\BIDS_NUMBER_LEN)
-                    .store_dict(asks) ;; asks
-                    .store_uint(bids_number, ASK\BIDS_NUMBER_LEN)
-                    .store_dict(bids) ;; bids
-                .end_cell()
-            )
-        .end_cell()
+            begin_cell()
+                .store_uint(asks_number, ASKS\BIDS_NUMBER_LEN)
+                .store_dict(asks) ;; asks
+                .store_uint(bids_number, ASKS\BIDS_NUMBER_LEN)
+                .store_dict(bids) ;; bids
     );
 }
 
-() add_ask(int priority) impure {
-    ;; bids check
+( int ) chek_bids(slice ask_address, int ask_jetton_amount) impure {
+
+    int ctx_priority = 1;
+    int ask_remainder = 0;
+    
+    repeat(PRIORITIES_NUMBER) {
+        var ( _, _, ctx_bids, ctx_bids_number) = extract_asks_bids(priority);
+
+        if ctx_bids_number != 0 {
+            int pivot = -1;
+
+            do {
+                (pivot, slice bid_info, int success) = ctx_bids.udict_get_next?(ASKS\BIDS_NUMBER_LEN, pivot);
+
+                if (success) {
+                    int ctx_bid_jetton_amount = bid_info.load_coins();
+
+                }
+                
+            } until(~ success)
+        }
+        ctx_priority += 1;
+    }
+
+}
+
+
+() add_check_ask(int priority, slice ask_address, int ask_jetton_amount) impure {
+    chek_bids(ask_address, ask_jetton_amount);
+
     ( cell asks, int asks_number, cell bids, int bids_number) = extract_asks_bids(priority);
 
     pack_asks_bids(priority, asks, asks_number, bids, bids_number);
 }
 
-() add_bid(int priority) impure {
-    ;; asks check
+() chek_asks(slice bid_address, int bid_jetton_amount) impure {
+    
+}
+
+() add_check_bid(int priority, slice bid_address, int bid_jetton_amount) impure {
+    chek_asks(bid_address, bid_jetton_amount);
 
     ( cell asks, int asks_number, cell bids, int bids_number) = extract_asks_bids(priority);
 
@@ -132,10 +174,10 @@ slice construct_std_addr(int std_addr) inline {
 }
 
 ( cell ) init_order_queues() impure {
-    int base_priority = 1;
+    int ctx_priority = 1;
     repeat(PRIORITIES_NUMBER) {
-        pack_asks_bids(base_priority, new_dict(), 0, new_dict(), 0);
-        base_priority += 1;
+        pack_asks_bids(ctx_priority, new_dict(), 0, new_dict(), 0);
+        ctx_priority += 1;
     }
 }
 
@@ -178,12 +220,12 @@ slice construct_std_addr(int std_addr) inline {
         int priority = inner_payload~load_uint(16);
 
         if inner_op == op::make_ask {
-            add_ask();
+            add_check_ask(priority, from_address, msg_jetton_amount);
             return ();
         }
 
         if inner_op == op::make_bid {
-            add_bid();
+            add_check_bid(priority, from_address, msg_jetton_amount);
             return ();
         }
     }

@@ -13,3 +13,4 @@ const int op::recv_new_session = "recv_new_session"h;
 
 ;; Basic Base
 const int op::jetton_transfer_notification = 0x7362d09c;
+const int op::jetton::transfer =             0x0f8a7ea5; ;; standart jetton wallet operation code
