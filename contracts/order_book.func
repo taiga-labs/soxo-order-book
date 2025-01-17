@@ -1,0 +1,201 @@
+#include "imports/stdlib.func";
+#include "imports/op_codes.func";
+#include "imports/constants.func";
+
+global slice init::admin_address;
+global slice init::book_minter_address;
+global slice init::soxo_jetton_address;
+
+global slice glob::usdt_jetton_wallet;
+global slice glob::soxo_jetton_wallet;
+
+global cell glob::porder_queues;
+
+global int glob::usdt_balance;
+global int glob::soxo_jetton_balance;
+global int glob::trading_session_price; 
+
+
+( int ) load_globals() impure inline {
+    slice smc_storage =         get_data().begin_parse();
+    init::admin_address =       smc_storage~load_msg_addr();
+    init::book_minter_address = smc_storage~load_msg_addr();
+    init::soxo_jetton_address = smc_storage~load_msg_addr();
+    glob::porder_queues =        smc_storage~load_dict();
+
+    if (smc_storage.slice_bits() > 0) | (smc_storage.slice_refs() > 0) {
+        
+        slice jw_addresses =       smc_storage.load_ref().begin_parse();
+        glob::usdt_jetton_wallet = jw_addresses~load_msg_addr();
+        glob::soxo_jetton_wallet = jw_addresses~load_msg_addr();
+
+        slice conis_info =            smc_storage.load_ref().begin_parse();
+        glob::usdt_balance =          conis_info~load_coins();
+        glob::soxo_jetton_balance =   conis_info~load_coins();
+        glob::trading_session_price = conis_info~load_coins();
+
+        return TRUE;
+    } else {
+        glob::usdt_jetton_wallet =    null();
+        glob::soxo_jetton_wallet =    null();
+        glob::usdt_balance =          null();
+        glob::soxo_jetton_balance =   null();
+        glob::trading_session_price = null();
+        return FALSE;
+    }
+}
+
+() set_globals() impure inline {
+    set_data(
+        begin_cell()
+            .store_slice(init::admin_address)
+            .store_slice(book_minter_address)
+            .store_slice(init::soxo_jetton_address)
+            
+            .store_dict(glob::porder_queues)
+
+            .store_ref(
+                begin_cell()
+                    .store_slice(glob::usdt_jetton_wallet)
+                    .store_slice(glob::soxo_jetton_wallet)
+                .end_cell()
+            )
+
+            .store_ref(
+                begin_cell()
+                    .store_coins(glob::usdt_balance)
+                    .store_coins(glob::soxo_jetton_balance)
+                    .store_coins(glob::trading_session_price)
+                .end_cell()
+            )
+
+
+        .end_cell()
+    );
+}
+
+slice construct_std_addr(int std_addr) inline {
+    return (
+        begin_cell()
+            .store_uint(2, 2) 
+            .store_uint(0, 1) 
+            .store_uint(BASECHAIN, 8) 
+            .store_uint(std_addr, 256)
+        .end_cell().begin_parse()
+    );
+}
+
+( cell, int, cell, int) extract_asks_bids(int priority) {
+    (cell ctx_priority_queues, int ok) = glob::porder_queues.udict_get_ref?(ORDER_QUEUES_KEY_LEN, priority);
+    throw_unless(51, ok);
+
+    cell ctx_queues  = ctx_priority_queues~load_ref();
+
+    slice queues_slice = ctx_queues.begin_parse();
+    return (
+        queues_slice~load_uint(ASK\BIDS_NUMBER_LEN),
+        queues_slice~load_dict(), 
+        queues_slice~load_uint(ASK\BIDS_NUMBER_LEN),
+        queues_slice~load_dict()
+    );
+}
+
+() pack_asks_bids(int priority, cell asks, int asks_number, cell bids, int bids_number) impure {
+    glob::porder_queues.udict_set_ref(
+        ORDER_QUEUES_KEY_LEN, priority, 
+        begin_cell()
+            .store_ref(
+                begin_cell()
+                    .store_uint(asks_number, ASK\BIDS_NUMBER_LEN)
+                    .store_dict(asks) ;; asks
+                    .store_uint(bids_number, ASK\BIDS_NUMBER_LEN)
+                    .store_dict(bids) ;; bids
+                .end_cell()
+            )
+        .end_cell()
+    );
+}
+
+() add_ask(int priority) impure {
+    ;; bids check
+    ( cell asks, int asks_number, cell bids, int bids_number) = extract_asks_bids(priority);
+
+    pack_asks_bids(priority, asks, asks_number, bids, bids_number);
+}
+
+() add_bid(int priority) impure {
+    ;; asks check
+
+    ( cell asks, int asks_number, cell bids, int bids_number) = extract_asks_bids(priority);
+
+    pack_asks_bids(priority, asks, asks_number, bids, bids_number);
+}
+
+( cell ) init_order_queues() impure {
+    int base_priority = 1;
+    repeat(PRIORITIES_NUMBER) {
+        pack_asks_bids(base_priority, new_dict(), 0, new_dict(), 0);
+        base_priority += 1;
+    }
+}
+
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    if (in_msg_body.slice_empty?()) { ;; ignore empty messages
+        return ();
+    }
+
+    slice recv_msg = in_msg_full.begin_parse();
+    int msg_flags = recv_msg~load_msg_flags();
+
+    if (is_bounced(msg_flags)) { ;; ignore all bounced messages
+        return ();
+    }
+    slice sender_address = recv_msg~load_msg_addr();
+
+    (int init?) = load_globals();
+
+    (int op_code, int query_id) = in_msg_body~load_op_and_query_id();
+    if (~ init?) {
+        throw_unless(403, equal_slices(init::book_minter_address, sender_address));
+        if op_code == op::minter_book_init {
+            glob::porder_queues          = init_order_queues()
+            glob::usdt_balance          = 0;
+            glob::soxo_jetton_balance   = 0;
+            glob::trading_session_price = 0;
+            set_globals();
+            return ();
+        }
+    }
+
+    if op_code == op::jetton_transfer_notification {
+        int msg_jetton_amount = in_msg_body~load_coins();
+        slice from_address = in_msg_body~load_msg_addr();
+        in_msg_body~skip_bits(1);
+
+        slice inner_payload = in_msg_body~load_ref().begin_parse();
+        int inner_op = inner_payload~load_op();
+        int priority = inner_payload~load_uint(16);
+
+        if inner_op == op::make_ask {
+            add_ask();
+            return ();
+        }
+
+        if inner_op == op::make_bid {
+            add_bid();
+            return ();
+        }
+    }
+
+
+    if op_code == op::recv_new_session {
+        return ();
+    }
+
+    throw(0xffff);
+}
+
+( int, int, int ) get_order_book_info() method_id {
+
+}

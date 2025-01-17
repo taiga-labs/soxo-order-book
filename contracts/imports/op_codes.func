@@ -1,0 +1,15 @@
+
+;; Book Minter
+const int op::deploy_order_book = "deploy_order_book"h;
+const int op::admin_fix =         "admin_fix"h;
+const int op::change_admin =      "change_admin"h;
+
+;; Order Book
+const int op::minter_book_init = "minter_book_init"h;
+const int op::add_liquidity =    "add_liquidity"h;
+const int op::make_ask =         "make_ask"h;
+const int op::make_bid =         "make_bid"h;
+const int op::recv_new_session = "recv_new_session"h;
+
+;; Basic Base
+const int op::jetton_transfer_notification = 0x7362d09c;
