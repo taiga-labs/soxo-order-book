@@ -1,4 +1,5 @@
 #include "includes/stdlib.func";
+#include "includes/errors.func";
 #include "includes/op_codes.func";
 #include "includes/constants.func";
 
@@ -15,20 +16,20 @@ global int glob::usdt_balance;
 global int glob::soxo_jetton_balance;
 global int glob::trading_session_price; ;; * 1000
 
-( int ) load_globals() impure inline {
+int load_globals( ) impure inline {
     slice smc_storage =         get_data().begin_parse();
     init::admin_address =       smc_storage~load_msg_addr();
     init::book_minter_address = smc_storage~load_msg_addr();
     init::soxo_jetton_address = smc_storage~load_msg_addr();
-    glob::porder_queues =        smc_storage~load_dict();
+    glob::porder_queues =       smc_storage~load_dict();
 
     if (smc_storage.slice_bits() > 0) | (smc_storage.slice_refs() > 0) {
         
-        slice jw_addresses =       smc_storage.load_ref().begin_parse();
+        slice jw_addresses =       smc_storage~load_ref().begin_parse();
         glob::usdt_jetton_wallet = jw_addresses~load_msg_addr();
         glob::soxo_jetton_wallet = jw_addresses~load_msg_addr();
 
-        slice conis_info =            smc_storage.load_ref().begin_parse();
+        slice conis_info =            smc_storage~load_ref().begin_parse();
         glob::usdt_balance =          conis_info~load_coins();
         glob::soxo_jetton_balance =   conis_info~load_coins();
         glob::trading_session_price = conis_info~load_coins();
@@ -44,11 +45,11 @@ global int glob::trading_session_price; ;; * 1000
     }
 }
 
-() set_globals() impure inline {
+() set_globals( ) impure inline {
     set_data(
         begin_cell()
             .store_slice(init::admin_address)
-            .store_slice(book_minter_address)
+            .store_slice(init::book_minter_address)
             .store_slice(init::soxo_jetton_address)
             
             .store_dict(glob::porder_queues)
@@ -73,7 +74,7 @@ global int glob::trading_session_price; ;; * 1000
     );
 }
 
-() send_jetton_ordinary(slice ctx_smc_jw, slice to_owner_address, int jetton_amount, int query_id) impure inline {
+() send_jetton_ordinary( slice ctx_smc_jw, slice to_owner_address, int jetton_amount, int query_id ) impure {
     builder message = 
         begin_cell()
             .store_uint(BOUNCEABLE, 6)
@@ -92,7 +93,7 @@ global int glob::trading_session_price; ;; * 1000
     send_raw_message(message.end_cell(), SEND_MODE_PAY_FEES_SEPARATELY);
 }
 
-slice construct_std_addr(int std_addr) inline {
+slice construct_slice_addr( int std_addr ) inline {
     return (
         begin_cell()
             .store_uint(2, 2) 
@@ -103,25 +104,26 @@ slice construct_std_addr(int std_addr) inline {
     );
 }
 
-( cell, int, cell, int) extract_asks_bids(int priority) {
+( cell, int, cell, int ) extract_asks_bids( int priority ) {
     (slice ctx_priority_queues, int ok) = glob::porder_queues.udict_get?(ORDER_QUEUES_KEY_LEN, priority);
     throw_unless(51, ok);
     return (
-        ctx_priority_queues~load_uint(ASKS\BIDS_NUMBER_LEN),
         ctx_priority_queues~load_dict(), 
         ctx_priority_queues~load_uint(ASKS\BIDS_NUMBER_LEN),
-        ctx_priority_queues~load_dict()
+        ctx_priority_queues~load_dict(),
+        ctx_priority_queues~load_uint(ASKS\BIDS_NUMBER_LEN)
+        
     );
 }
 
-() pack_asks_bids(int priority, cell asks, int asks_number, cell bids, int bids_number) impure {
+() pack_asks_bids( int priority, cell asks, int asks_number, cell bids, int bids_number ) impure {
     glob::porder_queues~udict_set_builder(
         ORDER_QUEUES_KEY_LEN, priority, 
             begin_cell()
+                .store_dict(asks)
                 .store_uint(asks_number, ASKS\BIDS_NUMBER_LEN)
-                .store_dict(asks) ;; asks
+                .store_dict(bids)
                 .store_uint(bids_number, ASKS\BIDS_NUMBER_LEN)
-                .store_dict(bids) ;; bids
     );
 }
 
@@ -139,36 +141,64 @@ slice construct_std_addr(int std_addr) inline {
     ├── ...
     └── PRIORITIES_NUMBER
         │
-        ├── asks_number: int 
-        │
         ├── asks 
         │   ├── key:   int --> std_addr
         │   └── value: builder --> coins
         │
-        ├── bids_number: int
+        ├── asks_number: int 
         │
-        └── bids
-            ├── key:   int --> std_addr
-            └── value: builder --> coins
+        │── bids
+        │    ├── key:   int --> std_addr
+        │    └── value: builder --> coins
+        │
+        └── bids_number: int
+        
+
 -}
 
-int get_usdt(int soxo_amount) {
+int get_usdt( int soxo_amount ) {
     return ((soxo_amount * glob::trading_session_price) / TSP_DIVIDER);
 }
 
-int get_soxo(int usdt_amount) {
+int get_soxo( int usdt_amount ) {
     return ((usdt_amount * TSP_DIVIDER) / glob::trading_session_price);
 }
 
 
-() execute_orders(cell orders_dict) impure {
+() execute_orders( cell orders_dict, int qi ) impure {
 
+    int success = TRUE;
+    int addr_pivot = -1;
+
+    do {   
+
+        ( addr_pivot, slice order_info, success ) = orders_dict.udict_get_next?(ASKS\BIDS_NUMBER_LEN, addr_pivot);
+
+        if success {   
+            slice ctx_smc_jw = null();
+
+            int order_type = order_info~load_uint(ORDER_ID_LEN);
+            int order_amount = order_info~load_coins();
+
+            slice user_address = construct_slice_addr(addr_pivot);
+
+            if order_type == BID_ID {
+                ctx_smc_jw = glob::usdt_jetton_wallet;
+                order_amount = order_amount / USDT_MULTIPLIER; 
+            } else {
+                ctx_smc_jw = glob::soxo_jetton_wallet;
+            }
+
+            send_jetton_ordinary(ctx_smc_jw, user_address, order_amount, qi);
+        }
+
+    } until( ~ success )
 }
 
 ;; тут разраешются ASK(запрос покупки SOXO за USDT), то есть на выходе в 
 ;; идеальном случае тому, кто сделал ASK - перейдут SOXO, а всем BID, которые этот ASK покрыли - USDT
 
-( cell, int ) chek_bids(slice ask_address, int ask_usdt_amount) impure {
+( cell, int ) chek_bids( slice ask_address, int ask_usdt_amount ) impure {
 
     int ctx_priority = 1;
     int iterable_ask_usdt_amount = ask_usdt_amount;
@@ -189,10 +219,10 @@ int get_soxo(int usdt_amount) {
             
             ;; bids[iter]
             do {
-                (addr_pivot, slice bid_info, success) = ctx_bids.udict_get_next?(ASKS\BIDS_NUMBER_LEN, addr_pivot);
+                ( addr_pivot, slice bid_info, success ) = ctx_bids.udict_get_next?(ASKS\BIDS_NUMBER_LEN, addr_pivot);
 
-                if (success) {
-                    int ctx_soxo_bid_amount = bid_info.load_coins();
+                if success {
+                    int ctx_soxo_bid_amount = bid_info~load_coins();
                     int converted_ctx_soxo_bid_amount = get_usdt(ctx_soxo_bid_amount);
 
                     int dist = iterable_ask_usdt_amount - converted_ctx_soxo_bid_amount;
@@ -257,7 +287,7 @@ int get_soxo(int usdt_amount) {
                     }
                 }
                 
-            } until(~ success)
+            } until( ~ success )
         }
 
         ;; глобально обновляем состояние BID'ов текущего приоритета
@@ -267,15 +297,19 @@ int get_soxo(int usdt_amount) {
 
     ;; прожолжает цикл, пока условие (ctx_priority >= PRIORITIES_NUMBER) == false
     ;; оно ставнет false когда мы переберём все приоритеты, или когда сделаем (ctx_priority = PRIORITIES_NUMBER + 42), чтобы намеренно закончить цикл
-    } until(ctx_priority >= PRIORITIES_NUMBER) 
+    } until( ctx_priority >= PRIORITIES_NUMBER ) 
    
 
-    return (resulting_orders_dict, iterable_ask_usdt_amount);
+    return ( resulting_orders_dict, iterable_ask_usdt_amount );
 
 }
 
 
-() add_check_ask(int priority, slice ask_address, int ask_jetton_amount) impure {
+() add_check_ask( int priority, slice ask_address, int ask_jetton_amount, int qi ) impure {
+
+
+    throw_unless(error::min_ask, ask_jetton_amount > MIN_USDT_ASK);
+    glob::usdt_balance += ask_jetton_amount;
 
     ;; делаем decimals USDT 9, как у жетона SOXO 
     ;; (делаем его обратно 6 только перед отправкой в сеть), то есть если ORDER_ID == BID_ID, то делим отправляемый amount на 1000
@@ -304,13 +338,12 @@ int get_soxo(int usdt_amount) {
             begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(soxo_amount_to_asker)
         ); 
 
-        execute_orders(resulting_orders_dict); ;; исполняем все ордера!
+        execute_orders(resulting_orders_dict, qi); ;; исполняем все ордера!
     }
-
     return ();
 }
 
-() chek_asks(slice bid_address, int bid_soxo_amount) impure {
+( cell, int ) chek_asks( slice bid_address, int bid_soxo_amount ) impure {
 
     int ctx_priority = 1;
     int iterable_bid = get_usdt(bid_soxo_amount);
@@ -318,7 +351,7 @@ int get_soxo(int usdt_amount) {
     cell resulting_orders_dict = new_dict();
 
     do {
-        ( cell ctx_asks, int ctx_asks_number, cell bids, int bids_number ) = extract_asks_bids(priority);
+        ( cell ctx_asks, int ctx_asks_number, cell bids, int bids_number ) = extract_asks_bids(ctx_priority);
 
         if ctx_asks_number != 0 {
 
@@ -326,10 +359,10 @@ int get_soxo(int usdt_amount) {
             int success = TRUE;
 
             do {
-                (addr_pivot, slice ask_info, success) = ctx_asks.udict_get_next?(ASKS\BIDS_NUMBER_LEN, addr_pivot);
+                ( addr_pivot, slice ask_info, success ) = ctx_asks.udict_get_next?(ASKS\BIDS_NUMBER_LEN, addr_pivot);
 
-                if (success) {
-                    int ctx_ask_usdt_amount = ask_info.load_coins();
+                if success {
+                    int ctx_ask_usdt_amount = ask_info~load_coins();
                     int converted_ctx_ask_usdt_amount = get_soxo(ctx_ask_usdt_amount);
 
                     int dist = iterable_bid - ctx_ask_usdt_amount;
@@ -372,18 +405,20 @@ int get_soxo(int usdt_amount) {
                         ctx_priority = PRIORITIES_NUMBER + 42;
                     }
                 }
-            } until(~ success)
-
-
-            pack_asks_bids(ctx_priority, ctx_asks, ctx_asks_number, bids, bids_number);
-            ctx_priority += 1;
+            } until( ~ success )
         }
-    } until(ctx_priority >= PRIORITIES_NUMBER)
 
-    return (resulting_orders_dict, get_soxo(iterable_bid));
+        pack_asks_bids(ctx_priority, ctx_asks, ctx_asks_number, bids, bids_number);
+        ctx_priority += 1;
+        
+    } until( ctx_priority >= PRIORITIES_NUMBER )
+
+    return ( resulting_orders_dict, get_soxo(iterable_bid) );
 }
 
-() add_check_bid(int priority, slice bid_address, int bid_soxo_amount) impure {
+() add_check_bid( int priority, slice bid_address, int bid_soxo_amount, int qi ) impure {
+
+    glob::soxo_jetton_balance += bid_soxo_amount;
 
     ( cell resulting_orders_dict, int remaining_bid_amount ) = chek_asks(bid_address, bid_soxo_amount);
 
@@ -407,13 +442,13 @@ int get_soxo(int usdt_amount) {
             STD_ADDR_LEN, bid_address_std, 
             begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(usdt_amount_to_bider)
         ); 
-        execute_orders(resulting_orders_dict); ;; исполняем все ордера!
+        execute_orders(resulting_orders_dict, qi); ;; исполняем все ордера!
     }
 
     return ();
 }
 
-( cell ) init_order_queues() impure {
+() init_order_queues( ) impure {
     int ctx_priority = 1;
     repeat(PRIORITIES_NUMBER) {
         pack_asks_bids(ctx_priority, new_dict(), 0, new_dict(), 0);
@@ -422,7 +457,7 @@ int get_soxo(int usdt_amount) {
 }
 
 
-() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+() recv_internal( int my_balance, int msg_value, cell in_msg_full, slice in_msg_body ) impure {
     if (in_msg_body.slice_empty?()) { ;; ignore empty messages
         return ();
     }
@@ -435,13 +470,14 @@ int get_soxo(int usdt_amount) {
     }
     slice sender_address = recv_msg~load_msg_addr();
 
-    (int init?) = load_globals();
+    int init? = load_globals();
 
-    (int op_code, int query_id) = in_msg_body~load_op_and_query_id();
-    if (~ init?) {
-        throw_unless(403, equal_slices(init::book_minter_address, sender_address));
+    ( int op_code, int query_id ) = in_msg_body~load_op_and_query_id();
+
+    if ~ init? {
+        throw_unless(403, equal_slices_bits(init::book_minter_address, sender_address));
         if op_code == op::minter_book_init {
-            glob::porder_queues          = init_order_queues()
+            init_order_queues();
             glob::usdt_balance          = 0;
             glob::soxo_jetton_balance   = 0;
             glob::trading_session_price = 0;
@@ -460,12 +496,14 @@ int get_soxo(int usdt_amount) {
         int priority = inner_payload~load_uint(16);
 
         if inner_op == op::make_ask {
-            add_check_ask(priority, from_address, msg_jetton_amount);
+            add_check_ask(priority, from_address, msg_jetton_amount, query_id);
+            set_globals();
             return ();
         }
 
         if inner_op == op::make_bid {
-            add_check_bid(priority, from_address, msg_jetton_amount);
+            add_check_bid(priority, from_address, msg_jetton_amount, query_id);
+            set_globals();
             return ();
         }
     }
@@ -478,6 +516,60 @@ int get_soxo(int usdt_amount) {
     throw(0xffff);
 }
 
-( int, int, int ) get_order_book_info() method_id {
+( int, int, int ) get_order_book_info( ) method_id {
+    load_globals();
+
+    return (
+        glob::usdt_balance,
+        glob::soxo_jetton_balance,
+        glob::trading_session_price
+    );
 
 }
+
+;; cell get_user_info( slice user_address, int priority ) method_id {
+
+;;     ( _, int user_address_std ) = parse_std_addr(user_address);
+
+;;     int key_c = 1;
+;;     cell user_info_dict = new_dict();
+
+;;     ( cell asks, _, cell bids, _ ) = extract_asks_bids(priority);
+
+;;     int addr_pivot = -1;
+;;     int success = TRUE;
+
+;;     do {
+;;         (addr_pivot, slice ask_info, success) = asks.udict_get_next?(ASKS\BIDS_NUMBER_LEN, addr_pivot);
+;;         if success {
+;;             if user_address_std == addr_pivot {
+;;                 int amount = ask_info~load_coins();
+;;                 user_info_dict~udict_set_builder(32, key_c, begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(amount));
+;;                 key_c += 1;
+
+;;                 success = FALSE;
+;;             }
+;;         }
+;;     } until( ~ success )
+
+
+;;     addr_pivot = -1;
+;;     success = TRUE;
+
+;;      do {
+;;         (addr_pivot, slice bid_info, success) = bids.udict_get_next?(ASKS\BIDS_NUMBER_LEN, addr_pivot);
+;;         if success {
+;;             if user_address_std == addr_pivot {
+;;                 int amount = bid_info~load_coins();
+;;                 user_info_dict~udict_set_builder(32, key_c, begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(amount));
+;;                 key_c += 1;
+
+;;                 success = FALSE;
+;;             }
+;;         }
+;;     } until( ~ success )
+
+
+
+;;     return user_info_dict;
+;; }

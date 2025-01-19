@@ -14,3 +14,5 @@ const int ORDER_ID_LEN = 4;
 
 const int TSP_DIVIDER = 1000;
 const int USDT_MULTIPLIER = 1000;
+
+const int MIN_USDT_ASK = 1000000;
