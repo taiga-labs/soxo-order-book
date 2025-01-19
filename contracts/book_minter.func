@@ -1,5 +1,5 @@
-#include "imports/stdlib.func";
-#include "imports/op_codes.func";
+#include "includes/stdlib.func";
+#include "includes/op_codes.func";
 
 global slice glob::admin_address;
 global cell glob::order_book_code;

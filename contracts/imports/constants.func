@@ -1,5 +1,0 @@
-
-const int PRIORITIES_NUMBER = 10;
-
-const int ORDER_QUEUES_KEY_LEN = 8;
-const int ASKS\BIDS_NUMBER_LEN = 32;
