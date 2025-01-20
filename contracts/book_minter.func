@@ -1,28 +1,47 @@
 #include "includes/stdlib.func";
 #include "includes/op_codes.func";
+#include "includes/jetton_utils.func";
 
 global slice glob::admin_address;
+global slice glob::usdt_master_address;
+global slice glob::order_books_admin_address;
+
 global cell glob::order_book_code;
+global cell glob::usdt_wallet_code;
+global cell glob::soxo_channel_wallet_code;
+
 
 () load_globals( ) impure inline {
     slice smc_storage = get_data().begin_parse();
-    glob::admin_address = smc_storage~load_msg_addr();
-    glob::order_book_code = smc_storage~load_ref();
+    
+    glob::admin_address =             smc_storage~load_msg_addr();
+    glob::usdt_master_address =       smc_storage~load_msg_addr();
+    glob::order_books_admin_address = smc_storage~load_msg_addr();
+
+    glob::order_book_code =          smc_storage~load_ref();
+    glob::usdt_wallet_code =        smc_storage~load_ref();
+    glob::soxo_channel_wallet_code = smc_storage~load_ref();
 }
 
 () set_globals( ) impure inline {
     set_data(
         begin_cell()   
             .store_slice(glob::admin_address)
+            .store_slice(glob::usdt_master_address)
+            .store_slice(glob::order_books_admin_address)
+
             .store_ref(glob::order_book_code)
+            .store_ref(glob::usdt_wallet_code)
+            .store_ref(glob::soxo_channel_wallet_code)
         .end_cell()
     );
 }
 
-cell pack_order_book_init_storage( slice init::admin_address, slice init::soxo_jetton_address )  {
+cell pack_order_book_init_storage( slice init::owner_address, slice init::soxo_jetton_address )  {
     return (
         begin_cell()
-            .store_slice(init::admin_address)
+            .store_slice(init::owner_address)
+            .store_slice(glob::admin_address)
             .store_slice(my_address())
             .store_slice(init::soxo_jetton_address)
         .end_cell()
@@ -88,11 +107,15 @@ slice calculate_order_book_address( cell state_init ) inline {
     ( int op_code, int query_id ) = in_msg_body~load_op_and_query_id();
 
     if (op_code == op::deploy_order_book) { 
-        slice jetton_address = in_msg_body~load_msg_addr();
+        slice soxo_jetton_address = in_msg_body~load_msg_addr();
+
+        slice usdt_order_book_jw = calculate_user_jetton_wallet_address(sender_address, glob::usdt_master_address, glob::usdt_wallet_code);
+        slice soxo_order_book_jw = calculate_user_jetton_wallet_address(sender_address, soxo_jetton_address, glob::soxo_channel_wallet_code);
+
         deploy_new_order_book(
             pack_order_book_init_storage(
-                sender_address, jetton_address
-            ), begin_cell().store_op(op::minter_book_init).store_query_id(FALSE).end_cell(), my_balance, msg_value
+                sender_address, soxo_jetton_address
+            ), begin_cell().store_op(op::minter_book_init).store_query_id(FALSE).store_slice(usdt_order_book_jw).store_slice(soxo_order_book_jw).end_cell(), my_balance, msg_value
         );
         return ();
     }
@@ -115,21 +138,26 @@ slice calculate_order_book_address( cell state_init ) inline {
     throw(0xffff);
 }
 
-( slice, cell ) get_book_minter_data( ) method_id {
+( slice, slice, slice, cell, cell, cell ) get_book_minter_data( ) method_id {
     load_globals();
     return (
         glob::admin_address,
-        glob::order_book_code
+        glob::usdt_master_address,
+        glob::order_books_admin_address,
+
+        glob::order_book_code,
+        glob::usdt_wallet_code, 
+        glob::soxo_channel_wallet_code
     );
 }
 
-( slice ) get_order_book_address( slice admin_address, slice jetton_address ) method_id {
+( slice ) get_order_book_address( slice owner_address, slice jetton_address ) method_id {
     load_globals();
     return 
         calculate_order_book_address(
             calculate_order_book_state_init(
                 glob::order_book_code, pack_order_book_init_storage(
-                    admin_address, jetton_address
+                    owner_address, jetton_address
                 )
             )
         );

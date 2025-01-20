@@ -3,6 +3,7 @@
 #include "includes/op_codes.func";
 #include "includes/constants.func";
 
+global slice init::owner_address;
 global slice init::admin_address;
 global slice init::book_minter_address;
 global slice init::soxo_jetton_address;
@@ -18,7 +19,7 @@ global int glob::trading_session_price; ;; * 1000
 
 int load_globals( ) impure inline {
     slice smc_storage =         get_data().begin_parse();
-    init::admin_address =       smc_storage~load_msg_addr();
+    init::owner_address =       smc_storage~load_msg_addr();
     init::book_minter_address = smc_storage~load_msg_addr();
     init::soxo_jetton_address = smc_storage~load_msg_addr();
     glob::porder_queues =       smc_storage~load_dict();
@@ -48,6 +49,7 @@ int load_globals( ) impure inline {
 () set_globals( ) impure inline {
     set_data(
         begin_cell()
+            .store_slice(init::owner_address)
             .store_slice(init::admin_address)
             .store_slice(init::book_minter_address)
             .store_slice(init::soxo_jetton_address)
@@ -184,8 +186,10 @@ int get_soxo( int usdt_amount ) {
 
             if order_type == BID_ID {
                 ctx_smc_jw = glob::usdt_jetton_wallet;
+                glob::usdt_balance -= order_amount;
                 order_amount = order_amount / USDT_MULTIPLIER; 
             } else {
+                glob::soxo_jetton_balance -= order_amount;
                 ctx_smc_jw = glob::soxo_jetton_wallet;
             }
 
@@ -478,6 +482,8 @@ int get_soxo( int usdt_amount ) {
         throw_unless(403, equal_slices_bits(init::book_minter_address, sender_address));
         if op_code == op::minter_book_init {
             init_order_queues();
+            glob::usdt_jetton_wallet    = in_msg_body~load_msg_addr();
+            glob::soxo_jetton_wallet    = in_msg_body~load_msg_addr();
             glob::usdt_balance          = 0;
             glob::soxo_jetton_balance   = 0;
             glob::trading_session_price = 0;
@@ -527,49 +533,7 @@ int get_soxo( int usdt_amount ) {
 
 }
 
-;; cell get_user_info( slice user_address, int priority ) method_id {
-
-;;     ( _, int user_address_std ) = parse_std_addr(user_address);
-
-;;     int key_c = 1;
-;;     cell user_info_dict = new_dict();
-
-;;     ( cell asks, _, cell bids, _ ) = extract_asks_bids(priority);
-
-;;     int addr_pivot = -1;
-;;     int success = TRUE;
-
-;;     do {
-;;         (addr_pivot, slice ask_info, success) = asks.udict_get_next?(ASKS\BIDS_NUMBER_LEN, addr_pivot);
-;;         if success {
-;;             if user_address_std == addr_pivot {
-;;                 int amount = ask_info~load_coins();
-;;                 user_info_dict~udict_set_builder(32, key_c, begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(amount));
-;;                 key_c += 1;
-
-;;                 success = FALSE;
-;;             }
-;;         }
-;;     } until( ~ success )
-
-
-;;     addr_pivot = -1;
-;;     success = TRUE;
-
-;;      do {
-;;         (addr_pivot, slice bid_info, success) = bids.udict_get_next?(ASKS\BIDS_NUMBER_LEN, addr_pivot);
-;;         if success {
-;;             if user_address_std == addr_pivot {
-;;                 int amount = bid_info~load_coins();
-;;                 user_info_dict~udict_set_builder(32, key_c, begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(amount));
-;;                 key_c += 1;
-
-;;                 success = FALSE;
-;;             }
-;;         }
-;;     } until( ~ success )
-
-
-
-;;     return user_info_dict;
-;; }
+cell get_master_dict() method_id {
+    load_globals();
+    return glob::porder_queues;
+}
