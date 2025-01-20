@@ -66,11 +66,36 @@ export async function run(provider: NetworkProvider) {
 
     let pordersDict = Dictionary.loadDirect(Dictionary.Keys.Uint(16), asksBidsDictionaryValue, porderQueues);
 
-    console.log(pordersDict.keys())
-    // for (let iter: number = 0; iter < pordersDict.size; iter++) {
+    let ordersCtxInfo: asksBidsInfoType | undefined
+    for (let iter: number = 1; iter <= pordersDict.size; iter++) {
+        console.log(`Priority ${iter}:`)
+        ordersCtxInfo = pordersDict.get(iter);
+        
+        if (ordersCtxInfo?.asks_number as number > 0) {
+            console.log(`\tASKS number: ${ordersCtxInfo?.asks_number}`);
+            console.log(`\tASKS:`)
+            
+            let asksCtxKeys = ordersCtxInfo?.asks.keys() as bigint[]
+            let asksCtxValues = ordersCtxInfo?.asks.values() as orderInfoType[]
+            for (let jter: number = 0; jter < (ordersCtxInfo?.asks_number as number); jter += 1) {
+                console.log(`\t\tASK ${jter + 1}:`)
+                console.log("\t\t\t[ user address ]: ", getAddress(asksCtxKeys[jter]).toString())
+                console.log("\t\t\t[ user ASK volume ]: ", Number(asksCtxValues[jter].orderAmount) / 10 ** 9, "USDT\n")
+            }
+        }
 
-    // }
+        if (ordersCtxInfo?.bids_number as number > 0) {
+            console.log(`\tBIDS number: ${ordersCtxInfo?.bids_number}`);
+            console.log(`\tBIDS:`)
+            let bidsCtxKeys = ordersCtxInfo?.bids.keys() as bigint[]
+            let bidsCtxValues = ordersCtxInfo?.bids.values() as orderInfoType[]
+            for (let jter: number = 0; jter < (ordersCtxInfo?.bids_number as number); jter += 1) {
+                console.log(`\t\tBID ${jter + 1}:`)
+                console.log("\t\t\t[ user address ]: ", getAddress(bidsCtxKeys[jter]).toString())
+                console.log("\t\t\t[ user ASK volume ]: ", Number(bidsCtxValues[jter].orderAmount) / 10 ** 9, "SOXO\n")
+            }
+        }
+
+
+    }
 }
-
-
-// npx blueprint run --custom https://testnet.toncenter.com/api/v2/jsonRPC --custom-version v2 --custom-type testnet --custom-key 30b11a3740db2af63eb14f5c72c2e2e91a0913f7ed0b6cd74aa213679ac29d41 --mnemonic OrderBook/getPrices

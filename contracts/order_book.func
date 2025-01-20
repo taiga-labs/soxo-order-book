@@ -492,7 +492,7 @@ int get_soxo( int usdt_amount ) {
 
 () init_order_queues( ) impure {
     int ctx_priority = 1;
-    repeat(PRIORITIES_NUMBER - 1) {
+    repeat(PRIORITIES_NUMBER) {
         pack_asks_bids(ctx_priority, new_dict(), 0, new_dict(), 0);
         ctx_priority += 1;
     }
