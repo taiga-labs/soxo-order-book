@@ -542,7 +542,7 @@ int get_soxo( int usdt_amount ) {
         int priority = inner_payload~load_uint(ORDER_QUEUES_KEY_LEN);
 
         if inner_op == op::make_ask {
-            slice ctx_usdt_jw = calculate_user_jetton_wallet_address(from_address, glob::usdt_master_address, init::usdt_wallet_code);
+            slice ctx_usdt_jw = calculate_user_jetton_wallet_address(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
 
             throw_unless(error::not_usdt_jetton, equal_slices_bits(sender_address, ctx_usdt_jw));
             add_check_ask(priority, from_address, msg_jetton_amount, query_id);
@@ -551,7 +551,7 @@ int get_soxo( int usdt_amount ) {
         }
 
         if inner_op == op::make_bid {
-            slice ctx_soxo_jw = calculate_user_jetton_wallet_address(from_address, glob::soxo_master_address, init::soxo_wallet_code);
+            slice ctx_soxo_jw = calculate_user_jetton_wallet_address(my_address(), glob::soxo_master_address, init::soxo_wallet_code);
 
             throw_unless(error::not_soxo_jetton, equal_slices_bits(sender_address, ctx_soxo_jw));
             add_check_bid(priority, from_address, msg_jetton_amount, query_id);
@@ -593,6 +593,7 @@ int get_soxo( int usdt_amount ) {
         glob::soxo_master_address
     );
 }
+
 cell get_porder_queues() method_id {
     load_globals();
     return glob::porder_queues;

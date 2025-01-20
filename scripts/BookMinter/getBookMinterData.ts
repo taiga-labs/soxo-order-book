@@ -15,8 +15,8 @@ export async function run(provider: NetworkProvider) {
     console.log("[ admin_address ]:", bookMinterData[0])
     console.log("[ usdt_master_address ]:", bookMinterData[1])
     console.log("[ order_books_admin_address ]:", bookMinterData[2])
-
-    // console.log("[ order_book_code ]:", bookMinterData[3])
-    // console.log("[ usdt_wallet_code ]:", bookMinterData[4])
-    // console.log("[ soxo_channel_wallet_code ]:", bookMinterData[5])
+  
+    // console.log("[ order_book_code ]:", bookMinterData[3].toString())
+    // console.log("[ usdt_wallet_code ]:", bookMinterData[4].toString())
+    // console.log("[ soxo_channel_wallet_code ]:", bookMinterData[5].toString())
 }

@@ -28,7 +28,7 @@ export class OrderBook implements Contract {
     }
 
     async getPorderQueues(provider: ContractProvider): Promise<Cell | null> {
-        let res = await provider.get('get_master_dict', []); // get_porder_queues
+        let res = await provider.get('get_porder_queues', []);
         return res.stack.readCellOpt();
     }
 

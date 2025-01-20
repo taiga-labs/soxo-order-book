@@ -67,6 +67,7 @@ export async function run(provider: NetworkProvider) {
     let pordersDict = Dictionary.loadDirect(Dictionary.Keys.Uint(16), asksBidsDictionaryValue, porderQueues);
 
     let ordersCtxInfo: asksBidsInfoType | undefined
+
     for (let iter: number = 1; iter <= pordersDict.size; iter++) {
         console.log(`Priority ${iter}:`)
         ordersCtxInfo = pordersDict.get(iter);
@@ -95,7 +96,5 @@ export async function run(provider: NetworkProvider) {
                 console.log("\t\t\t[ user ASK volume ]: ", Number(bidsCtxValues[jter].orderAmount) / 10 ** 9, "SOXO\n")
             }
         }
-
-
     }
 }
