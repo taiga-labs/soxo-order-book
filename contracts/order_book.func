@@ -499,7 +499,9 @@ int get_soxo( int usdt_amount ) {
 
         slice inner_payload = in_msg_body~load_ref().begin_parse();
         int inner_op = inner_payload~load_op();
-        int priority = inner_payload~load_uint(16);
+
+        ;; TODO: verification
+        int priority = inner_payload~load_uint(ORDER_QUEUES_KEY_LEN);
 
         if inner_op == op::make_ask {
             add_check_ask(priority, from_address, msg_jetton_amount, query_id);
@@ -514,15 +516,17 @@ int get_soxo( int usdt_amount ) {
         }
     }
 
-
+    ;; new trading session price from backend
     if op_code == op::recv_new_session {
+        throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
+        glob::trading_session_price = in_msg_body~load_coins();
         return ();
     }
 
     throw(0xffff);
 }
 
-( int, int, int ) get_order_book_info( ) method_id {
+( int, int, int ) get_order_book_prices( ) method_id {
     load_globals();
 
     return (
@@ -533,6 +537,18 @@ int get_soxo( int usdt_amount ) {
 
 }
 
+( slice, slice, slice, slice, slice, slice ) get_order_book_addresses( ) method_id {
+    load_globals();
+    return (
+        init::owner_address,
+        init::admin_address,
+        init::book_minter_address,
+        init::soxo_jetton_address,
+
+        glob::usdt_jetton_wallet,
+        glob::soxo_jetton_wallet
+    );
+}
 cell get_master_dict() method_id {
     load_globals();
     return glob::porder_queues;

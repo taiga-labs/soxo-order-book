@@ -151,7 +151,7 @@ slice calculate_order_book_address( cell state_init ) inline {
     );
 }
 
-( slice ) get_order_book_address( slice owner_address, slice jetton_address ) method_id {
+slice get_order_book_address( slice owner_address, slice jetton_address ) method_id {
     load_globals();
     return 
         calculate_order_book_address(
