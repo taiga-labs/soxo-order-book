@@ -20,15 +20,15 @@ export class OrderBook implements Contract {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: 
                 beginCell()
-                    .storeUint(0x4fbf6bd7bf2bf980n, 32)
+                    .storeUint(0xbb35443b, 32)
                     .storeUint(opts.qi, 64)
                     .storeCoins(opts.newTradingSessionPrice)
                 .endCell(),
         });
     }
 
-    async getMasterDict(provider: ContractProvider): Promise<Cell | null> {
-        let res = await provider.get('get_master_dict', []);
+    async getPorderQueues(provider: ContractProvider): Promise<Cell | null> {
+        let res = await provider.get('get_master_dict', []); // get_porder_queues
         return res.stack.readCellOpt();
     }
 
@@ -41,10 +41,9 @@ export class OrderBook implements Contract {
         ]
     }
 
-    async getAddresses(provider: ContractProvider): Promise<[Address, Address, Address, Address, Address, Address]> {
+    async getAddresses(provider: ContractProvider): Promise<[Address, Address, Address, Address, Address]> {
         let res = await provider.get('get_order_book_addresses', []);
         return [
-            res.stack.readAddress(),
             res.stack.readAddress(),
             res.stack.readAddress(),
             res.stack.readAddress(),

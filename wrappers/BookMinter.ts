@@ -45,6 +45,25 @@ export class BookMinter implements Contract {
         });
     }
 
+    async sendDeployOrderBook(provider: ContractProvider, via: Sender, 
+        opts: {
+            value: bigint;
+            qi: bigint;
+            soxoJettonAddress: Address;
+        }
+    ) {
+        await provider.internal(via, {
+            value: opts.value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(0xf4874876, 32)
+                    .storeUint(opts.qi, 64)
+                    .storeAddress(opts.soxoJettonAddress)
+                .endCell(),
+        });
+    }
+
     async getOrderBookAddress(provider: ContractProvider, 
         opts: {
             ownerAddress: Address;

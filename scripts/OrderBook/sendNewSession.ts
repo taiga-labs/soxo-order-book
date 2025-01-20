@@ -11,6 +11,6 @@ export async function run(provider: NetworkProvider) {
     await orderBook.sendNewSession(provider.sender(), {
         value: toNano('0.05'),
         qi: BigInt(Math.floor(Date.now() / 1000)),
-        newTradingSessionPrice: 100n
+        newTradingSessionPrice: 10n
     });
 }

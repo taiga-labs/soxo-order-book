@@ -1,3 +1,6 @@
 
 const int error::forbitten = 403;
 const int error::min_ask = 100;
+
+const int error::not_usdt_jetton = 101;
+const int error::not_soxo_jetton = 102;

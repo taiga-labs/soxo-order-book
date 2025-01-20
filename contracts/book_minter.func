@@ -4,6 +4,7 @@
 
 global slice glob::admin_address;
 global slice glob::usdt_master_address;
+
 global slice glob::order_books_admin_address;
 
 global cell glob::order_book_code;
@@ -19,7 +20,7 @@ global cell glob::soxo_channel_wallet_code;
     glob::order_books_admin_address = smc_storage~load_msg_addr();
 
     glob::order_book_code =          smc_storage~load_ref();
-    glob::usdt_wallet_code =        smc_storage~load_ref();
+    glob::usdt_wallet_code =         smc_storage~load_ref();
     glob::soxo_channel_wallet_code = smc_storage~load_ref();
 }
 
@@ -40,10 +41,23 @@ global cell glob::soxo_channel_wallet_code;
 cell pack_order_book_init_storage( slice init::owner_address, slice init::soxo_jetton_address )  {
     return (
         begin_cell()
-            .store_slice(init::owner_address)
-            .store_slice(glob::admin_address)
-            .store_slice(my_address())
-            .store_slice(init::soxo_jetton_address)
+            .store_ref(
+                begin_cell()
+                    .store_ref(
+                        begin_cell()
+                            .store_slice(init::owner_address)
+                            .store_slice(glob::admin_address)
+                        .end_cell()
+                    )
+                    .store_ref(
+                        begin_cell()
+                            .store_slice(my_address())
+                            .store_ref(glob::usdt_wallet_code)
+                            .store_ref(glob::soxo_channel_wallet_code)
+                        .end_cell()
+                    )
+                .end_cell()
+            )
         .end_cell()
     );
 }
@@ -109,13 +123,10 @@ slice calculate_order_book_address( cell state_init ) inline {
     if (op_code == op::deploy_order_book) { 
         slice soxo_jetton_address = in_msg_body~load_msg_addr();
 
-        slice usdt_order_book_jw = calculate_user_jetton_wallet_address(sender_address, glob::usdt_master_address, glob::usdt_wallet_code);
-        slice soxo_order_book_jw = calculate_user_jetton_wallet_address(sender_address, soxo_jetton_address, glob::soxo_channel_wallet_code);
-
         deploy_new_order_book(
             pack_order_book_init_storage(
                 sender_address, soxo_jetton_address
-            ), begin_cell().store_op(op::minter_book_init).store_query_id(FALSE).store_slice(usdt_order_book_jw).store_slice(soxo_order_book_jw).end_cell(), my_balance, msg_value
+            ), begin_cell().store_op(op::minter_book_init).store_query_id(FALSE).store_slice(glob::usdt_master_address).store_slice(soxo_jetton_address).end_cell(), my_balance, msg_value
         );
         return ();
     }

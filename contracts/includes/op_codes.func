@@ -1,15 +1,14 @@
 
 ;; Book Minter
-const int op::deploy_order_book = "deploy_order_book"h;
-const int op::admin_fix =         "admin_fix"h;
-const int op::change_admin =      "change_admin"h;
+const int op::deploy_order_book = 0xf4874876;
+const int op::admin_fix =         0x555a;
+const int op::change_admin =      0x444b;
 
 ;; Order Book
-const int op::minter_book_init = "minter_book_init"h;
-const int op::add_liquidity =    "add_liquidity"h;
-const int op::make_ask =         "make_ask"h;
-const int op::make_bid =         "make_bid"h;
-const int op::recv_new_session = "recv_new_session"h;
+const int op::minter_book_init = 0x9486490;
+const int op::make_ask =         0x845746;
+const int op::make_bid =         0xbf4385;
+const int op::recv_new_session = 0xbb35443b;
 
 ;; Basic Base
 const int op::jetton_transfer_notification = 0x7362d09c;
