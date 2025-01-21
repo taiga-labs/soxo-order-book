@@ -206,11 +206,11 @@ int get_soxo( int usdt_amount ) inline {
 () execute_orders( cell orders_dict, int qi ) impure {
 
     int success = TRUE;
-    int addr_pivot = 0;
+    int addr_pivot = -1;
 
     do {   
 
-        ( addr_pivot, slice order_info, success ) = orders_dict.udict_get_nexteq?(STD_ADDR_LEN, addr_pivot);
+        ( addr_pivot, slice order_info, success ) = orders_dict.udict_get_next?(STD_ADDR_LEN, addr_pivot);
 
         if success {   
             cell ctx_si = begin_cell().end_cell();
@@ -257,12 +257,12 @@ int get_soxo( int usdt_amount ) inline {
         if ctx_bids_number != 0 {
 
             ;; iterate over all bids of this prtiority
-            int ppivot = 0;
+            int ppivot = -1;
             int success = TRUE;
             
             ;; bids[iter]
             do {
-                ( ppivot, slice bid_info, success ) = ctx_bids.udict_get_nexteq?(ASKS_BIDS_NUMBER_LEN, ppivot);
+                ( ppivot, slice bid_info, success ) = ctx_bids.udict_get_next?(ASKS_BIDS_NUMBER_LEN, ppivot);
 
                 if success {
                     int ctx_soxo_bid_amount = bid_info~load_coins();
@@ -410,7 +410,7 @@ int get_soxo( int usdt_amount ) inline {
             int success = TRUE;
 
             do {
-                ( ppivot, slice ask_info, success ) = ctx_asks.udict_get_nexteq?(ASKS_BIDS_NUMBER_LEN, ppivot);
+                ( ppivot, slice ask_info, success ) = ctx_asks.udict_get_next?(ASKS_BIDS_NUMBER_LEN, ppivot);
 
                 if success {
                     int ctx_ask_usdt_amount = ask_info~load_coins();
