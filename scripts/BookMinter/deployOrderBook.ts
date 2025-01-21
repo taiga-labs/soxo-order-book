@@ -14,5 +14,4 @@ export async function run(provider: NetworkProvider) {
         qi: BigInt(Math.floor(Date.now() / 1000)),
         soxoJettonAddress: Address.parse(SOXO_MASTER_ADDRESS)
     });
-    await provider.waitForDeploy(bookMinter.address);
 }
