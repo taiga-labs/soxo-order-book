@@ -9,6 +9,7 @@ const int op::minter_book_init = 0x9486490;
 const int op::make_ask =         0x845746;
 const int op::make_bid =         0xbf4385;
 const int op::recv_new_session = 0xbb35443b;
+const int op::fix_balances =     0x8724359;
 
 ;; Basic Base
 const int op::jetton_transfer_notification = 0x7362d09c;
