@@ -1,6 +1,7 @@
 
 const int PRIORITIES_NUMBER = 10;
 
+const int FFREZE_LEN = 4;
 const int ORDER_ID_LEN = 4;
 const int STD_ADDR_LEN = 256;
 const int ORDER_QUEUES_KEY_LEN = 16;

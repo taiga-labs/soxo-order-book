@@ -27,6 +27,25 @@ export class OrderBook implements Contract {
         });
     }
 
+    async sendFreeze(provider: ContractProvider, via: Sender, 
+        opts: {
+            value: bigint;
+            qi: bigint;
+            freeze: boolean;
+        }
+    ) {
+        await provider.internal(via, {
+            value: opts.value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(0x325aba5, 32)
+                    .storeUint(opts.qi, 64)
+                    .storeInt(opts.freeze == true ? -1 : 0,4)
+                .endCell(),
+        });
+    }
+
     async getPorderQueues(provider: ContractProvider): Promise<Cell | null> {
         let res = await provider.get('get_porder_queues', []);
         return res.stack.readCellOpt();

@@ -1,5 +1,6 @@
 #include "includes/stdlib.func";
 #include "includes/op_codes.func";
+#include "includes/constants.func";
 #include "includes/jetton_utils.func";
 
 global slice glob::admin_address;
@@ -43,6 +44,7 @@ cell pack_order_book_init_storage( slice init::owner_address, slice init::soxo_j
         begin_cell()
             .store_ref(
                 begin_cell()
+                    .store_int(FALSE, FFREZE_LEN)
                     .store_ref(
                         begin_cell()
                             .store_slice(init::owner_address)

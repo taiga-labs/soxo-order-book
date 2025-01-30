@@ -2,6 +2,8 @@
 #include "includes/errors.func";
 #include "includes/op_codes.func";
 #include "includes/constants.func";
+
+#include "includes/usdt_utils.func";
 #include "includes/jetton_utils.func";
 
 global slice init::owner_address;
@@ -20,9 +22,12 @@ global int glob::usdt_balance;
 global int glob::soxo_jetton_balance;
 global int glob::trading_session_price; ;; * 1000
 
+global int glob::ffreeze;
+
 int load_globals( ) impure {
     slice smc_storage =         get_data().begin_parse();
 
+    glob::ffreeze =             smc_storage~load_int(FFREZE_LEN);
     slice addrs_ref =           smc_storage~load_ref().begin_parse();
 
     slice addrs1 =              addrs_ref~load_ref().begin_parse();
@@ -38,7 +43,7 @@ int load_globals( ) impure {
     if (smc_storage.slice_bits() > 0) | (smc_storage.slice_refs() > 0) {
         glob::porder_queues =       smc_storage~load_dict();
 
-        slice jw_addresses =       smc_storage~load_ref().begin_parse();
+        slice jw_addresses =        smc_storage~load_ref().begin_parse();
         glob::usdt_master_address = jw_addresses~load_msg_addr();
         glob::soxo_master_address = jw_addresses~load_msg_addr();
 
@@ -65,6 +70,8 @@ int load_globals( ) impure {
 () set_globals( ) impure {
     set_data(
         begin_cell()
+
+            .store_int(glob::ffreeze, FFREZE_LEN)
             .store_ref(
                 begin_cell()
                     .store_ref(
@@ -102,11 +109,22 @@ int load_globals( ) impure {
     );
 }
 
-() send_jetton_ordinary( cell ctx_si, slice to_owner_address, int jetton_amount, int query_id ) impure {
+() send_jetton_ordinary( cell ctx_si, slice to_owner_address, int jetton_amount, int query_id, int jflag ) impure {
+
+    slice jw_address = null();
+
+    if jflag == 1 {
+        jw_address = soxo::calculate_jetton_wallet_address(ctx_si);
+    } elseif jflag == 2 {
+        jw_address = usdt::calculate_jetton_wallet_address(ctx_si);
+    } else {
+        throw(99);
+    }
+    
     builder message = 
         begin_cell()
             .store_uint(BOUNCEABLE, 6)
-            .store_slice(calculate_jetton_wallet_address(ctx_si))
+            .store_slice(jw_address)
             .store_coins(50000000)          ;; 0.05 TON
             .store_statinit_ref_and_body_ref(
                 ctx_si,
@@ -219,6 +237,8 @@ int get_soxo( int usdt_amount ) inline {
 
             slice user_address = construct_slice_addr(addr_pivot);
 
+            int jflag = 0;
+
             if order_type == BID_ID {
                 ;; usdt::calculate_jetton_wallet_state_init for mainnet
                 cell usdt_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
@@ -231,6 +251,8 @@ int get_soxo( int usdt_amount ) inline {
                 ;; 5 · Integer out of expected range
                 throw_if(error::usdt_balance_overflow, glob::usdt_balance < 0);
 
+                jflag = 1;
+
             } else {
                 cell soxo_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::soxo_master_address, init::soxo_wallet_code);
                 ctx_si = soxo_si;
@@ -239,9 +261,11 @@ int get_soxo( int usdt_amount ) inline {
 
                 ;; 5 · Integer out of expected range
                 throw_if(error::soxo_balance_overflow, glob::soxo_jetton_balance < 0);
+
+                jflag = 2;
             }
 
-            send_jetton_ordinary(ctx_si, user_address, order_amount, qi);
+            send_jetton_ordinary(ctx_si, user_address, order_amount, qi, jflag);
         }
 
     } until( ~ success );
@@ -631,6 +655,8 @@ int get_soxo( int usdt_amount ) inline {
     }
 
     if op_code == op::jetton_transfer_notification {
+        throw_if(error::freezed, glob::ffreeze == TRUE);
+
         int msg_jetton_amount = in_msg_body~load_coins();
         slice from_address = in_msg_body~load_msg_addr();
         in_msg_body~skip_bits(1);
@@ -676,6 +702,14 @@ int get_soxo( int usdt_amount ) inline {
         set_globals();
         return ();
     }
+
+    if op_code == op::freeze {
+        throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
+        glob::ffreeze = in_msg_body~load_int(FFREZE_LEN);
+        set_globals();
+        return ();
+    }
+
 
     throw(0xffff);
 }
