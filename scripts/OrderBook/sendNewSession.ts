@@ -11,7 +11,7 @@ const TSP_DIVIDER: bigint = 1000n;
 export async function run(provider: NetworkProvider) {
     const orderBook = provider.open(OrderBook.createFromAddress(Address.parse(ORDER_BOOK_ADDRESS)));
     await orderBook.sendNewSession(provider.sender(), {
-        value: toNano('0.05'),
+        value: toNano('0.01'),
         qi: BigInt(Math.floor(Date.now() / 1000)),
         newTradingSessionPrice: 10n * TSP_DIVIDER
     });

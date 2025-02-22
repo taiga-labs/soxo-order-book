@@ -42,9 +42,9 @@ global cell glob::soxo_channel_wallet_code;
 cell pack_order_book_init_storage( slice init::owner_address, slice init::soxo_jetton_address )  {
     return (
         begin_cell()
+            .store_int(FALSE, FFREZE_LEN)
             .store_ref(
                 begin_cell()
-                    .store_int(FALSE, FFREZE_LEN)
                     .store_ref(
                         begin_cell()
                             .store_slice(init::owner_address)
@@ -59,6 +59,7 @@ cell pack_order_book_init_storage( slice init::owner_address, slice init::soxo_j
                         .end_cell()
                     )
                 .end_cell()
+                
             )
         .end_cell()
     );

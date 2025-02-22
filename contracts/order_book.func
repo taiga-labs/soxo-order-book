@@ -644,8 +644,8 @@ int get_soxo( int usdt_amount ) inline {
         throw_unless(403, equal_slices_bits(init::book_minter_address, sender_address));
         if op_code == op::minter_book_init {
             init_order_queues();
-            glob::usdt_master_address    = in_msg_body~load_msg_addr();
-            glob::soxo_master_address    = in_msg_body~load_msg_addr();
+            glob::usdt_master_address   = in_msg_body~load_msg_addr();
+            glob::soxo_master_address   = in_msg_body~load_msg_addr();
             glob::usdt_balance          = 0;
             glob::soxo_jetton_balance   = 0;
             glob::trading_session_price = 0;
