@@ -1,0 +1,57 @@
+
+
+() send_ton_ordinary(slice to_address, int ton_amount, slice msg, int query_id, int mode ) impure {
+    builder message = 
+        begin_cell()
+            .store_uint(BOUNCEABLE, 6)
+            .store_slice(to_address)
+            .store_coins(ton_amount)
+            .store_only_body_ref(
+               begin_cell()
+                    .store_uint(0, 32)
+                    .store_slice(msg) 
+               .end_cell()
+            );
+
+    send_raw_message(message.end_cell(), mode);
+}
+    
+() send_jetton_ordinary( cell ctx_si,  slice to_owner_address, int jetton_amount, slice jw_address, int query_id, int mode ) impure {
+
+    builder message = 
+        begin_cell()
+            .store_uint(BOUNCEABLE, 6)
+            .store_slice(jw_address)
+            .store_coins(ONE_TONem2)
+            .store_statinit_ref_and_body_ref(
+                ctx_si,
+                begin_cell()
+                    .store_op(op::jetton::transfer) 
+                    .store_query_id(query_id)
+
+                    .store_coins(jetton_amount)
+                    .store_slice(to_owner_address)  ;; to_owner_address
+                    .store_uint(0, 2)               ;; response_address
+                    .store_int(0, 1)                ;; empty custom_payload
+                    .store_coins(0)                 ;; forward amount to new_owner_address
+                    .store_int(0, 1)                ;; empty forward_payload
+                .end_cell()
+            );
+
+    send_raw_message(message.end_cell(), mode);
+}
+
+() send_jetton_order( cell ctx_si, slice to_owner_address, int jetton_amount, int query_id, int order_id, int mode ) impure {
+    slice jw_address = null();
+
+    if order_id == ASK_ID {
+        ;; usdt::calculate_jetton_wallet_state_init for mainnet
+        jw_address = soxo::calculate_jetton_wallet_address(ctx_si);
+    } elseif order_id == BID_ID {
+        jw_address = usdt::calculate_jetton_wallet_address(ctx_si);
+    } else {
+        throw(error::invalid_order_id );
+    }
+
+    send_jetton_ordinary(ctx_si, to_owner_address, jetton_amount, jw_address, query_id, mode);
+}

@@ -1,0 +1,57 @@
+() init_order_queues( ) impure {
+    int ctx_priority = 1;
+    repeat(PRIORITIES_NUMBER) {
+        pack_asks_bids(ctx_priority, new_dict(), new_dict());
+        ctx_priority += 1;
+    }
+}
+
+() execute_orders( cell orders_dict, int qi ) impure {
+
+    int success = TRUE;
+    int addr_pivot = -1;
+
+    do {   
+        ( addr_pivot, slice order_info, success ) = orders_dict.udict_get_next?(STD_ADDR_LEN, addr_pivot);
+
+        if success {   
+            cell ctx_si = begin_cell().end_cell();
+
+            int order_type = order_info~load_uint(ORDER_ID_LEN);
+            int order_amount = order_info~load_coins();
+
+            slice user_address = construct_slice_addr(addr_pivot);
+
+            int order_id = 0;
+
+            if order_type == BID_ID {
+                ;; usdt::calculate_jetton_wallet_state_init for mainnet
+                cell usdt_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
+                
+                ctx_si = usdt_si;
+                order_amount = order_amount / USDT_MULTIPLIER; 
+
+                glob::usdt_balance -= order_amount;
+
+                ;; 5 · Integer out of expected range
+                throw_if(error::usdt_balance_overflow, glob::usdt_balance < 0);
+
+                order_id = BID_ID;
+
+            } else {
+                cell soxo_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::soxo_master_address, init::soxo_wallet_code);
+                ctx_si = soxo_si;
+
+                glob::soxo_jetton_balance -= order_amount;
+
+                ;; 5 · Integer out of expected range
+                throw_if(error::soxo_balance_overflow, glob::soxo_jetton_balance < 0);
+
+                order_id = ASK_ID;
+            }
+
+            send_jetton_order(ctx_si, user_address, order_amount, qi, order_id, SEND_MODE_PAY_FEES_SEPARATELY);
+        }
+
+    } until( ~ success );
+}

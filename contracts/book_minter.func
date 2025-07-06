@@ -1,7 +1,7 @@
-#include "includes/stdlib.func";
-#include "includes/op_codes.func";
-#include "includes/constants.func";
-#include "includes/jetton_utils.func";
+#include "includes/book/stdlib.func";
+#include "includes/book/op_codes.func";
+#include "includes/book/constants.func";
+#include "includes/book/jetton_utils.func";
 
 global slice glob::admin_address;
 global slice glob::usdt_master_address;
@@ -129,8 +129,16 @@ slice calculate_order_book_address( cell state_init ) inline {
         deploy_new_order_book(
             pack_order_book_init_storage(
                 sender_address, soxo_jetton_address
-            ), begin_cell().store_op(op::minter_book_init).store_query_id(FALSE).store_slice(glob::usdt_master_address).store_slice(soxo_jetton_address).end_cell(), my_balance, msg_value
+            ), 
+            begin_cell()
+                .store_op(op::minter_book_init)
+                .store_query_id(FALSE)
+                .store_slice(glob::usdt_master_address)
+                .store_slice(soxo_jetton_address)
+            .end_cell(), 
+            my_balance, msg_value
         );
+
         return ();
     }
 

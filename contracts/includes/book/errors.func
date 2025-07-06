@@ -1,0 +1,12 @@
+
+const int error::forbitten =               403;
+const int error::min_ask =                 100;
+const int error::not_usdt_jetton =         101;
+const int error::not_soxo_jetton =         102;
+const int error:no_comments =              103;
+const int error::usdt_balance_overflow =   201;
+const int error::soxo_balance_overflow =   202;
+const int error::freezed =                 203;
+const int error::less_ton =                309;
+const int error::invalid_order_id =        400;
+const int error::not_exists_while_cancel = 401;
