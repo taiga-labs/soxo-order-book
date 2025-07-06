@@ -1,0 +1,178 @@
+#include "includes/stdlib.func";
+#include "includes/op_codes.func";
+#include "includes/constants.func";
+#include "includes/jetton_utils.func";
+
+global slice glob::admin_address;
+global slice glob::usdt_master_address;
+
+global slice glob::order_books_admin_address;
+
+global cell glob::order_book_code;
+global cell glob::usdt_wallet_code;
+global cell glob::soxo_channel_wallet_code;
+
+
+() load_globals( ) impure inline {
+    slice smc_storage = get_data().begin_parse();
+    
+    glob::admin_address =             smc_storage~load_msg_addr();
+    glob::usdt_master_address =       smc_storage~load_msg_addr();
+    glob::order_books_admin_address = smc_storage~load_msg_addr();
+
+    glob::order_book_code =          smc_storage~load_ref();
+    glob::usdt_wallet_code =         smc_storage~load_ref();
+    glob::soxo_channel_wallet_code = smc_storage~load_ref();
+}
+
+() set_globals( ) impure inline {
+    set_data(
+        begin_cell()   
+            .store_slice(glob::admin_address)
+            .store_slice(glob::usdt_master_address)
+            .store_slice(glob::order_books_admin_address)
+
+            .store_ref(glob::order_book_code)
+            .store_ref(glob::usdt_wallet_code)
+            .store_ref(glob::soxo_channel_wallet_code)
+        .end_cell()
+    );
+}
+
+cell pack_order_book_init_storage( slice init::owner_address, slice init::soxo_jetton_address )  {
+    return (
+        begin_cell()
+            .store_int(FALSE, FFREZE_LEN)
+            .store_ref(
+                begin_cell()
+                    .store_ref(
+                        begin_cell()
+                            .store_slice(init::owner_address)
+                            .store_slice(glob::admin_address)
+                        .end_cell()
+                    )
+                    .store_ref(
+                        begin_cell()
+                            .store_slice(my_address())
+                            .store_ref(glob::usdt_wallet_code)
+                            .store_ref(glob::soxo_channel_wallet_code)
+                        .end_cell()
+                    )
+                .end_cell()
+                
+            )
+        .end_cell()
+    );
+}
+
+cell calculate_order_book_state_init( cell order_book_code, cell order_book_storage ) inline {
+    return 
+        begin_cell()
+            .store_uint(0, 2)
+            .store_dict(order_book_code)
+            .store_dict(order_book_storage)
+            .store_uint(0, 1)
+        .end_cell();
+}
+
+slice calculate_order_book_address( cell state_init ) inline {
+    return 
+        begin_cell()
+            .store_uint(4, 3)
+            .store_int(0, 8)
+            .store_uint(cell_hash(state_init), 256)
+        .end_cell().begin_parse();
+}
+
+() deploy_new_order_book( cell order_book_init_storage, cell order_book_body, int my_balance, int msg_value ) impure inline {
+
+    cell order_book_state_init = calculate_order_book_state_init(glob::order_book_code, order_book_init_storage);
+
+    builder message = 
+        begin_cell()
+            .store_uint(BOUNCEABLE, 6)
+            .store_slice(calculate_order_book_address(order_book_state_init))
+            .store_coins(FALSE)
+            .store_statinit_ref_and_body_ref(order_book_state_init, order_book_body);
+
+    int reserve_amount = my_balance - msg_value;
+
+    if (reserve_amount < 10000000) {
+        reserve_amount = 10000000; ;; 0.01 TON
+    } else {
+        reserve_amount += 100000; ;; 0.0001 TON for storage usage
+    }
+    raw_reserve(reserve_amount, 0);
+
+    send_raw_message(message.end_cell(), SEND_MODE_CARRY_ALL_BALANCE); 
+}
+
+() recv_internal( int my_balance, int msg_value, cell in_msg_full, slice in_msg_body ) impure {
+    if (in_msg_body.slice_empty?()) { ;; ignore empty messages
+        return ();
+    }
+
+    slice recv_msg = in_msg_full.begin_parse();
+    int msg_flags = recv_msg~load_msg_flags();
+
+    if (is_bounced(msg_flags)) { ;; ignore all bounced messages
+        return ();
+    }
+    slice sender_address = recv_msg~load_msg_addr();
+
+    load_globals();
+    ( int op_code, int query_id ) = in_msg_body~load_op_and_query_id();
+
+    if (op_code == op::bm::deploy_order_book) { 
+        slice soxo_jetton_address = in_msg_body~load_msg_addr();
+
+        deploy_new_order_book(
+            pack_order_book_init_storage(
+                sender_address, soxo_jetton_address
+            ), begin_cell().store_op(op::minter_book_init).store_query_id(FALSE).store_slice(glob::usdt_master_address).store_slice(soxo_jetton_address).end_cell(), my_balance, msg_value
+        );
+        return ();
+    }
+
+    if op_code == op::bm::admin_fix {
+        throw_unless(403, equal_slices_bits(glob::admin_address, sender_address));
+        slice message = in_msg_body~load_ref().begin_parse();
+        int send_mode = message~load_uint(8);
+        send_raw_message(message~load_ref(), send_mode);
+        return ();
+    }
+
+    if op_code == op::bm::change_admin { 
+        throw_unless(403, equal_slices_bits(glob::admin_address, sender_address));
+        slice new_admin_address = in_msg_body~load_msg_addr();
+        set_globals();
+        return ();
+    }
+    
+    throw(op::unknown_op);
+}
+
+( slice, slice, slice, cell, cell, cell ) get_book_minter_data( ) method_id {
+    load_globals();
+    return (
+        glob::admin_address,
+        glob::usdt_master_address,
+        glob::order_books_admin_address,
+
+        glob::order_book_code,
+        glob::usdt_wallet_code, 
+        glob::soxo_channel_wallet_code
+    );
+}
+
+slice get_order_book_address( slice owner_address, slice jetton_address ) method_id {
+    load_globals();
+    return 
+        calculate_order_book_address(
+            calculate_order_book_state_init(
+                glob::order_book_code, pack_order_book_init_storage(
+                    owner_address, jetton_address
+                )
+            )
+        );
+}

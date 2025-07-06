@@ -1,0 +1,21 @@
+
+;; Book Minter
+const int op::bm::deploy_order_book = 0xf4874876;
+const int op::bm::admin_fix =         0x555a;
+const int op::bm::change_admin =      0x444b;
+
+;; Order Book
+const int op::ob::change_admin =     0x1234;
+const int op::ob::make_ask =         0x845746;
+const int op::ob::make_bid =         0xbf4385;
+const int op::ob::recv_new_session = 0xbb35443b;
+const int op::ob::fix_balances =     0x8724359;
+const int op::ob::freeze =           0x325aba5;
+
+;; Common
+const int op::minter_book_init = 0x9486490;
+
+;; Basic Base
+const int op::unknown_op =                   0xffff;
+const int op::jetton_transfer_notification = 0x7362d09c;
+const int op::jetton::transfer =             0x0f8a7ea5; ;; standart jetton wallet operation code
