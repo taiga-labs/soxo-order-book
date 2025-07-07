@@ -53,7 +53,7 @@
     int init? = load_globals();
 
     ( int op_code, int query_id ) = in_msg_body~load_op_and_query_id();
-
+    
     if ~ init? {
         throw_unless(error::forbitten, equal_slices_bits(init::book_minter_address, sender_address));
         if op_code == op::minter_book_init {
@@ -102,7 +102,8 @@
             add_bid(priority, from_address, msg_jetton_amount, query_id);
             set_globals();
             return ();
-        }
+        } 
+        throw(error::not_an_order_id);
     }
 
     if op_code == op::ob::cancel_order {
@@ -176,8 +177,6 @@
         send_ton_ordinary(to_address, amount, "", now(), SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
         return ();
     }
-
-
     throw(op::unknown_op);
 }
 
@@ -207,4 +206,8 @@
 cell get_porder_queues() method_id {
     load_globals();
     return glob::porder_queues;
+}
+
+int init?() method_id {
+    return load_globals();
 }

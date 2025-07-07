@@ -1,7 +1,9 @@
 import { Opcodes } from './includes/OpCodes';
-import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode } from '@ton/core';
+import { Address, beginCell, Builder, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode } from '@ton/core';
 
 export type JettonWalletConfig = {
+    status: number
+    balance: number
     owner: Address;
     minter: Address;
     walletCode: Cell;
@@ -16,7 +18,8 @@ export type WalletData = {
 
 export function jettonWalletConfigToCell(config: JettonWalletConfig): Cell {
     return beginCell()
-        .storeCoins(0)
+        .storeUint(config.status, 4)
+        .storeCoins(config.balance)
         .storeAddress(config.owner)
         .storeAddress(config.minter)
         .storeRef(config.walletCode)
@@ -51,24 +54,30 @@ export class JettonWallet implements Contract {
             jettonAmount: bigint
             forwardTONAmount: bigint,
             recipientAddress: Address,
-            forwardPayload: Cell,
+            forwardPayload: Cell | null,
         }
     ) {
+        let msgBody: Builder =                 
+            beginCell()
+                .storeUint(0xf8a7ea5, 32)
+                .storeUint(opts.qi, 64)
+                .storeCoins(opts.jettonAmount)
+                .storeAddress(opts.recipientAddress)
+                .storeUint(0, 2)
+                .storeUint(0, 1)
+                .storeCoins(opts.forwardTONAmount);
+        
+        if (opts.forwardPayload != null) {
+            msgBody.storeBit(1).storeRef(opts.forwardPayload)
+        } else {
+            msgBody.storeBit(0)
+        }
+
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             value : opts.value + opts.forwardTONAmount,
-            body: 
-                beginCell()
-                    .storeUint(0x0f8a7ea5, 32)
-                    .storeUint(opts.qi, 64)
-                    .storeCoins(opts.jettonAmount)
-                    .storeAddress(opts.recipientAddress)
-                    .storeAddress(via.address)
-                    .storeUint(0, 1)
-                    .storeCoins(opts.forwardTONAmount)
-                    .storeBit(1)
-                    .storeRef(opts.forwardPayload)
-                .endCell()
+            body: msgBody.endCell()
+
         });
     }
 

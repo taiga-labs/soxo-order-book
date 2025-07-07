@@ -39,7 +39,7 @@ global cell glob::soxo_channel_wallet_code;
     );
 }
 
-cell pack_order_book_init_storage( slice init::owner_address, slice init::soxo_jetton_address )  {
+cell pack_order_book_init_storage( slice init::owner_address )  {
     return (
         begin_cell()
             .store_int(FALSE, FFREZE_LEN)
@@ -128,7 +128,7 @@ slice calculate_order_book_address( cell state_init ) inline {
 
         deploy_new_order_book(
             pack_order_book_init_storage(
-                sender_address, soxo_jetton_address
+                sender_address
             ), 
             begin_cell()
                 .store_op(op::minter_book_init)
@@ -173,13 +173,13 @@ slice calculate_order_book_address( cell state_init ) inline {
     );
 }
 
-slice get_order_book_address( slice owner_address, slice jetton_address ) method_id {
+slice get_order_book_address( slice owner_address ) method_id {
     load_globals();
     return 
         calculate_order_book_address(
             calculate_order_book_state_init(
                 glob::order_book_code, pack_order_book_init_storage(
-                    owner_address, jetton_address
+                    owner_address
                 )
             )
         );

@@ -10,8 +10,8 @@ slice construct_slice_addr( int std_addr ) inline {
 }
 
 ( cell, cell ) extract_asks_bids( int priority ) impure inline {
-    (slice ctx_priority_queues, int ok) = glob::porder_queues.udict_get?(ORDER_QUEUES_KEY_LEN, priority);
-    throw_unless(51, ok);
+    (slice ctx_priority_queues, int ok?) = glob::porder_queues.udict_get?(ORDER_QUEUES_KEY_LEN, priority);
+    throw_unless(error::priority_queues_extract, ok?);
     return (
         ctx_priority_queues~load_dict(), 
         ctx_priority_queues~load_dict()

@@ -1,7 +1,9 @@
+import { DICTADD } from '@tact-lang/compiler';
 import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Dictionary, DictionaryValue, Sender, SendMode } from '@ton/core';
 
 const FFREZE_LEN: number = 4;
 const ASKS_BIDS_NUMBER_LEN: number = 64;
+const STD_ADDR_LEN: number = 256;
 
 export type orderInfoType = {
     amount: bigint
@@ -17,6 +19,24 @@ export const orderDictionaryValue: DictionaryValue<orderInfoType> = {
         }
     },
 }
+
+export type porderQueuesType = {
+    asks: Dictionary<bigint, orderInfoType>;
+    bids: Dictionary<bigint, orderInfoType>
+}
+
+export const porderQueuesDictionaryValue: DictionaryValue<porderQueuesType> = {
+    serialize(src, builder) {    
+        builder.storeDict(src.asks);
+        builder.storeDict(src.bids);
+    },
+    parse(src) {
+        return {
+            asks: src.loadDict(Dictionary.Keys.BigUint(STD_ADDR_LEN), orderDictionaryValue),
+            bids: src.loadDict(Dictionary.Keys.BigUint(STD_ADDR_LEN), orderDictionaryValue),
+        }
+    },
+}
 export type OrderBookConfig = {
     ffreeze: number;
     owner_address: Address;
@@ -24,7 +44,7 @@ export type OrderBookConfig = {
     book_minter_address: Address;
     usdt_wallet_code: Cell;
     soxo_wallet_code: Cell;
-    porder_queues: Dictionary<bigint, orderInfoType>
+    porder_queues: Dictionary<bigint, porderQueuesType>
 
     usdt_master_address: Address;
     soxo_master_address: Address;
@@ -151,6 +171,12 @@ export class OrderBook implements Contract {
             res.stack.readBigNumber(),
             res.stack.readBigNumber()
         ]
+    }
+
+
+    async getInit(provider: ContractProvider): Promise<number> {
+        let res = await provider.get('init?', []);
+        return res.stack.readNumber()
     }
 
     async getAddresses(provider: ContractProvider): Promise<[Address, Address, Address, Address, Address]> {

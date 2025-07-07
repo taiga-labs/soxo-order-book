@@ -10,3 +10,5 @@ const int error::freezed =                 203;
 const int error::less_ton =                309;
 const int error::invalid_order_id =        400;
 const int error::not_exists_while_cancel = 401;
+const int error::not_an_order_id =         812;
+const int error::priority_queues_extract = 510;
