@@ -57,7 +57,9 @@
     if ~ init? {
         throw_unless(error::forbitten, equal_slices_bits(init::book_minter_address, sender_address));
         if op_code == op::minter_book_init {
+            glob::porder_queues = new_dict(); 
             init_order_queues();
+
             glob::usdt_master_address   = in_msg_body~load_msg_addr();
             glob::soxo_master_address   = in_msg_body~load_msg_addr();
             glob::usdt_balance          = 0;

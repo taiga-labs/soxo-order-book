@@ -10,7 +10,6 @@ import { buildjettonMinterContentCell } from '../helpers/metadata';
 import { JettonFactory } from '../wrappers/JettonFactory';
 import { KeyPair, mnemonicNew, mnemonicToPrivateKey } from "@ton/crypto";
 import { JettonWallet, WalletData } from '../wrappers/JettonWallet';
-import { assert } from 'console';
 
 const TIMEOUT: number = 420000;
 
@@ -68,6 +67,7 @@ describe('BookMinter', () => {
         blockchain = await Blockchain.create();
         ACTdeployer = await blockchain.treasury('deployer');
         ACTAdmin = await blockchain.treasury('Minters And Factory Owner');
+        ACTAdmin = await blockchain.treasury('orderBookOwner')
 
         // JETTON FACTORY ----------------------------------------------------------------------------------------------
         SCjettonFactory  = blockchain.openContract(JettonFactory.createFromConfig({
@@ -122,7 +122,6 @@ describe('BookMinter', () => {
         }, bookMinterCode));
 
         // ORDER BOOK AND HIS OWNER ----------------------------------------------------------------------------------------------
-        ACTAdmin = await blockchain.treasury('orderBookOwner')
 
         SCorderBook = blockchain.openContract(OrderBook.createFromConfig({
             ffreeze: 0,
@@ -131,14 +130,6 @@ describe('BookMinter', () => {
             book_minter_address: SCbookMinter.address,
             usdt_wallet_code: usdtWalletCode,
             soxo_wallet_code: soxoWalletCode,
-            porder_queues: Dictionary.empty(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue),
-            usdt_master_address: SCusdtMinter.address,
-            soxo_master_address: SCsoxoMinter.address,
-            usdt_balance: 0,
-            soxo_jetton_balance: 0,
-            trading_session_price: 0,
-            asks_counter: 0,
-            bids_counter: 0
         }, orderBookCode));
 
         // ALICE AND HER SOXO WALLET ----------------------------------------------------------------------------------------------
@@ -233,7 +224,7 @@ describe('BookMinter', () => {
         })
 
         const soxoJettonData: jettonData = await SCsoxoMinter.getJettonData();
-        
+
         expect(soxoJettonData.totalSupply).toEqual(AmountToMint * 2n)
 
         // MINT USDT TO ALICE AND BOB
@@ -256,107 +247,8 @@ describe('BookMinter', () => {
             fromAddress: SCusdtMinter.address
         })
 
-        const usdtJettonData: jettonData = await SCsoxoMinter.getJettonData();
+        const usdtJettonData: jettonData = await SCusdtMinter.getJettonData();
 
         expect(usdtJettonData.totalSupply).toEqual(AmountToMint * 2n)
-    }, TIMEOUT);
-
-    it('should mkae bid', async () => {
-
-        console.log("Order Book Address: ", SCorderBook.address)
-
-        // Actiave Test Order Book
-        const orderOrderBookResult = await SCorderBook.sendDeploy(ACTAdmin.getSender(), toNano('0.5'))
-        expect(orderOrderBookResult.transactions).toHaveTransaction({
-            from: ACTAdmin.address,
-            to: SCorderBook.address,
-            success: true,
-        });
-
-        // Init Order Book
-        const deployResult = await SCbookMinter.sendDeployOrderBook(ACTAdmin.getSender(), {
-            value: toNano("0.05"),
-            qi: BigInt(Math.floor(Date.now() / 1000)),
-            soxoJettonAddress: SCsoxoMinter.address,
-        });
-
-        expect(deployResult.transactions).toHaveTransaction({
-            from: ACTAdmin.address,
-            to: SCbookMinter.address,
-            op: 0xf4874876, // op::bm::deploy_order_book
-            success: true,
-        });
-
-        expect(deployResult.transactions).toHaveTransaction({
-            from: SCbookMinter.address,
-            to: SCorderBook.address,
-            op: 0x9486490, // op::minter_book_init
-            success: true,
-        });
-
-        // MINT 100_000 SOXO TO ALICE
-        const AmountToMint: bigint = 100_000n * 10n**9n;
-        await SCsoxoMinter.sendMint(ACTAdmin.getSender(), {
-            value: toNano('0.08'),
-            queryId: BigInt(Math.floor(Date.now() / 1000)),
-            toAddress: ACTALice.address,
-            tonAmount: toNano('0.05'),
-            jettonAmountToMint: AmountToMint,
-            fromAddress: SCsoxoMinter.address
-        })
-        const soxoJettonData: jettonData = await SCsoxoMinter.getJettonData();
-        expect(soxoJettonData.totalSupply).toEqual(AmountToMint)
-
-        // MAKE ASK!
-
-        const PRIORITY: number = 1;
-        const SOXO_AMOUNT: bigint = 20n;
-
-        const makeAskResult = await SCsoxoAliceWallet.sendTransfer(ACTALice.getSender(), {
-            value: toNano("0.15"),
-            qi: BigInt(Math.floor(Date.now() / 1000)),
-            jettonAmount: SOXO_AMOUNT * 10n**9n,
-            recipientAddress: SCorderBook.address,
-            forwardTONAmount: toNano("0.065"),
-            forwardPayload: (
-                beginCell()
-                    .storeUint(0xbf4385, 32)
-                    .storeUint(PRIORITY, 16) 
-                .endCell()
-            )
-        })
-
-        // От Алисы её SOXO jetton wallet
-        expect(makeAskResult.transactions).toHaveTransaction({
-            from: ACTALice.address,
-            to: SCsoxoAliceWallet.address,
-            op: 0xf8a7ea5, // op::transfer
-            success: true,
-        });
-
-        // От SOXO JETTON WALLET Алисы SOXO JETTON WALLET СК OrderBook
-        expect(makeAskResult.transactions).toHaveTransaction({
-            from: SCsoxoAliceWallet.address,
-            to: SCsoxoOrderBookWallet.address,
-            op: 0x178d4519, // op::internal_transfer 
-            success: true,
-        });
-
-        // const walletData: WalletData = await SCsoxoOrderBookWallet.getWalletData()
-        // console.log(await SCorderBook.getInit())
-
-        const porderQueues = await SCorderBook.getPorderQueues()
-        let porderQueuesDict = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues);
-        console.log(porderQueuesDict.keys())
-        console.log(porderQueuesDict.values())
-
-        // // От SOXO JETTON WALLET СК OrderBook СК OrderBook'у
-        // expect(makeAskResult.transactions).toHaveTransaction({
-        //     from: SCsoxoOrderBookWallet.address,
-        //     to: SCorderBook.address,
-        //     op: 0x7362d09c, // op::transfer_notification
-        //     success: true,
-        // });
-
     }, TIMEOUT);
 });

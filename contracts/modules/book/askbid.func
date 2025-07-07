@@ -7,108 +7,104 @@
     while ( ctx_priority <= PRIORITIES_NUMBER ) {
         ( cell ctx_asks, cell bids ) = extract_asks_bids(ctx_priority);
 
-        ifnot ctx_asks.dict_empty?() {
+        int ctx_std_addr_pivot = -1;
+        int success = TRUE;
 
-            int ctx_std_addr_pivot = -1;
-            int success = TRUE;
+        do {
+            ( ctx_std_addr_pivot, slice ask_info, success ) = ctx_asks.udict_get_next?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
 
-            do {
-                ( ctx_std_addr_pivot, slice ask_info, success ) = ctx_asks.udict_get_next?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
+            if success {
+                int ctx_ask_usdt_amount = ask_info~load_coins();
+                int converted_ctx_ask_usdt_amount = get_soxo(ctx_ask_usdt_amount);
+                int dist = iterable_bid - ctx_ask_usdt_amount;
 
-                if success {
-                    int ctx_ask_usdt_amount = ask_info~load_coins();
-                    
-                    int converted_ctx_ask_usdt_amount = get_soxo(ctx_ask_usdt_amount);
+                if dist == 0 {
 
-                    int dist = iterable_bid - ctx_ask_usdt_amount;
+                    ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr_pivot);
+                    if exists {
+                        int order_id = ctx_info~load_uint(ORDER_ID_LEN);
+                        int previous_coins_amount = ctx_info~load_coins();
 
-                    if dist == 0 {
-
-                        ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr_pivot);
-                        if exists {
-                            int order_id = ctx_info~load_uint(ORDER_ID_LEN);
-                            int previous_coins_amount = ctx_info~load_coins();
-
-                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                                STD_ADDR_LEN, ctx_std_addr_pivot, 
-                                begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount + previous_coins_amount)
-                            ); 
-
-                        } else {
-                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                                STD_ADDR_LEN, ctx_std_addr_pivot, 
-                                begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount)
-                            );
-                        }
-
-                        ( ctx_asks, int suc ) = ctx_asks.udict_delete?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
-                        throw_unless(error:no_comments, suc);
-
-                        ;; glob::asks_counter -= 1;
-
-                        iterable_bid -= ctx_ask_usdt_amount;
-                        pack_asks_bids(ctx_priority, ctx_asks, bids);
-
-                        success = FALSE;
-                        ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
-                    } elseif dist > 0 {  
-                        ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr_pivot);
-                        if exists {
-                            int order_id = ctx_info~load_uint(ORDER_ID_LEN);
-                            int previous_coins_amount = ctx_info~load_coins();
-
-                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                                STD_ADDR_LEN, ctx_std_addr_pivot, 
-                                begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount + previous_coins_amount)
-                            ); 
-
-                        } else {
-                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                                STD_ADDR_LEN, ctx_std_addr_pivot, 
-                                begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount)
-                            ); 
-                        }
-
-                        ( ctx_asks, int suc ) = ctx_asks.udict_delete?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
-                        throw_unless(error:no_comments, suc);
-
-                        ;; glob::asks_counter -= 1;
-
-                        iterable_bid -= ctx_ask_usdt_amount;
-                        pack_asks_bids(ctx_priority, ctx_asks, bids);
-
-                    } else { 
-                        ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr_pivot);
-                        if exists {
-                            int order_id = ctx_info~load_uint(ORDER_ID_LEN);
-                            int previous_coins_amount = ctx_info~load_coins();
-
-                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                                STD_ADDR_LEN, ctx_std_addr_pivot, 
-                                begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(get_soxo(iterable_bid) + previous_coins_amount)
-                            ); 
-
-                        } else {
-                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                                STD_ADDR_LEN, ctx_std_addr_pivot, 
-                                begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(get_soxo(iterable_bid))
-                            ); 
-                        }
-                        
-                        ctx_asks = ctx_asks.udict_set_builder(
-                            ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot, 
-                            begin_cell().store_coins(ctx_ask_usdt_amount - iterable_bid).store_uint(ctx_std_addr_pivot, STD_ADDR_LEN)
+                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                            STD_ADDR_LEN, ctx_std_addr_pivot, 
+                            begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount + previous_coins_amount)
                         ); 
 
-                        iterable_bid -= iterable_bid;
-                        pack_asks_bids(ctx_priority, ctx_asks, bids);
-
-                        success = FALSE;
-                        ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
+                    } else {
+                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                            STD_ADDR_LEN, ctx_std_addr_pivot, 
+                            begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount)
+                        );
                     }
+
+                    ( ctx_asks, int suc ) = ctx_asks.udict_delete?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
+                    throw_unless(error:no_comments, suc);
+
+                    ;; glob::asks_counter -= 1;
+
+                    iterable_bid -= ctx_ask_usdt_amount;
+                    pack_asks_bids(ctx_priority, ctx_asks, bids);
+
+                    success = FALSE;
+                    ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
+                } elseif dist > 0 {  
+                    ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr_pivot);
+                    if exists {
+                        int order_id = ctx_info~load_uint(ORDER_ID_LEN);
+                        int previous_coins_amount = ctx_info~load_coins();
+
+                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                            STD_ADDR_LEN, ctx_std_addr_pivot, 
+                            begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount + previous_coins_amount)
+                        ); 
+
+                    } else {
+                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                            STD_ADDR_LEN, ctx_std_addr_pivot, 
+                            begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount)
+                        ); 
+                    }
+
+                    ( ctx_asks, int suc ) = ctx_asks.udict_delete?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
+                    throw_unless(error:no_comments, suc);
+
+                    ;; glob::asks_counter -= 1;
+
+                    iterable_bid -= ctx_ask_usdt_amount;
+                    pack_asks_bids(ctx_priority, ctx_asks, bids);
+
+                } else { 
+                    ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr_pivot);
+                    if exists {
+                        int order_id = ctx_info~load_uint(ORDER_ID_LEN);
+                        int previous_coins_amount = ctx_info~load_coins();
+
+                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                            STD_ADDR_LEN, ctx_std_addr_pivot, 
+                            begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(get_soxo(iterable_bid) + previous_coins_amount)
+                        ); 
+
+                    } else {
+                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                            STD_ADDR_LEN, ctx_std_addr_pivot, 
+                            begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(get_soxo(iterable_bid))
+                        ); 
+                    }
+                        
+                    ctx_asks = ctx_asks.udict_set_builder(
+                        ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot, 
+                        begin_cell().store_coins(ctx_ask_usdt_amount - iterable_bid).store_uint(ctx_std_addr_pivot, STD_ADDR_LEN)
+                    ); 
+
+                    iterable_bid -= iterable_bid;
+                    pack_asks_bids(ctx_priority, ctx_asks, bids);
+
+                    success = FALSE;
+                    ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
                 }
-            } until( ~ success );
-        }
+            }
+        } until( ~ success );
+        
 
         ctx_priority += 1;
         
@@ -131,134 +127,132 @@
         ;; priorities[iter]
         ( cell asks, cell ctx_bids ) = extract_asks_bids(ctx_priority);
 
-        ifnot ctx_bids.dict_empty?() {
-
-            ;; iterate over all bids of this prtiority
-            int ctx_std_addr_pivot = -1;
-            int success = TRUE;
+        ;; iterate over all bids of this prtiority
+        int ctx_std_addr_pivot = -1;
+        int success = TRUE;
             
-            ;; bids[iter]
-            do {
-                ( ctx_std_addr_pivot, slice bid_info, success ) = ctx_bids.udict_get_next?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
+        ;; bids[iter]
+        do {
+            ( ctx_std_addr_pivot, slice bid_info, success ) = ctx_bids.udict_get_next?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
 
-                if success {
-                    int ctx_soxo_bid_amount = bid_info~load_coins();
+            if success {
+            int ctx_soxo_bid_amount = bid_info~load_coins();
 
-                    int converted_ctx_soxo_bid_amount = get_usdt(ctx_soxo_bid_amount);
-                    ;;       =           10_000_000_000 -                10_000_000_000
-                    int dist = iterable_ask_usdt_amount - converted_ctx_soxo_bid_amount;
+                 int converted_ctx_soxo_bid_amount = get_usdt(ctx_soxo_bid_amount);
+                ;;       =           10_000_000_000 -                10_000_000_000
+                int dist = iterable_ask_usdt_amount - converted_ctx_soxo_bid_amount;
 
-                    ;; perfect fit!
-                    if dist == 0 { ;; лучший вариант, текущий BID идеально покрыл оставшийся ASK => останваоиваем поиски, мы полностью покрыи наш ASK!
+                ;; perfect fit!
+                if dist == 0 { ;; лучший вариант, текущий BID идеально покрыл оставшийся ASK => останваоиваем поиски, мы полностью покрыи наш ASK!
 
-                        ;; добавялем в спсиок тех, кому надо отправить USDT за их BID, 
-                        ;; так как их SOXO, которые они отдали контакру, чтобы сделать этот BID - уйдут тому, чей ASK покрывается в этом цикле
+                    ;; добавялем в спсиок тех, кому надо отправить USDT за их BID, 
+                    ;; так как их SOXO, которые они отдали контакру, чтобы сделать этот BID - уйдут тому, чей ASK покрывается в этом цикле
 
-                        ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr_pivot);
-                        if exists {
-                            int order_id = ctx_info~load_uint(ORDER_ID_LEN);
-                            int previous_coins_amount = ctx_info~load_coins();
+                    ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr_pivot);
+                    if exists {
+                        int order_id = ctx_info~load_uint(ORDER_ID_LEN);
+                        int previous_coins_amount = ctx_info~load_coins();
 
-                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                                STD_ADDR_LEN, ctx_std_addr_pivot, 
-                                begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_soxo_bid_amount + previous_coins_amount)
-                            ); 
-                        } else {
-                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                                STD_ADDR_LEN, ctx_std_addr_pivot, 
-                                begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(converted_ctx_soxo_bid_amount)
-                            ); 
-                        }
+                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                            STD_ADDR_LEN, ctx_std_addr_pivot, 
+                            begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_soxo_bid_amount + previous_coins_amount)
+                        ); 
+                    } else {
+                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                            STD_ADDR_LEN, ctx_std_addr_pivot, 
+                            begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(converted_ctx_soxo_bid_amount)
+                        ); 
+                    }
 
-                        ;; удаляем этот BID и уменьшаем счётчик количества BID'ов, так как полностью покрыли его нашим ASK
-                        ( ctx_bids, int suc ) = ctx_bids.udict_delete?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
-                        throw_unless(error:no_comments, suc);
+                    ;; удаляем этот BID и уменьшаем счётчик количества BID'ов, так как полностью покрыли его нашим ASK
+                    ( ctx_bids, int suc ) = ctx_bids.udict_delete?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
+                    throw_unless(error:no_comments, suc);
 
-                        ;; glob::bids_counter -= 1;
-                        ;; уменьшаем объём ask'a (обнуляем)
-                        iterable_ask_usdt_amount -= converted_ctx_soxo_bid_amount;
+                    ;; glob::bids_counter -= 1;
+                    ;; уменьшаем объём ask'a (обнуляем)
+                    iterable_ask_usdt_amount -= converted_ctx_soxo_bid_amount;
 
-                        pack_asks_bids(ctx_priority, asks, ctx_bids);
+                    pack_asks_bids(ctx_priority, asks, ctx_bids);
 
-                        ;; выходим из цикла, так как мы уже покрыли ASK
-                        success = FALSE;
-                        ;; заканчиваем и глобальный цикл, который перебирает приоритеты
-                        ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
+                    ;; выходим из цикла, так как мы уже покрыли ASK
+                    success = FALSE;
+                    ;; заканчиваем и глобальный цикл, который перебирает приоритеты
+                    ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
 
-                    } elseif dist > 0 { ;; значит, что текущий BID мы берём, но его не достаточно для покрытия всего ASK => идём искать дальше
+                } elseif dist > 0 { ;; значит, что текущий BID мы берём, но его не достаточно для покрытия всего ASK => идём искать дальше
 
-                        ;; добавялем в спсиок тех, кому надо отправить USDT за их BID, 
-                        ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr_pivot);
-                        if exists {
-                            int order_id = ctx_info~load_uint(ORDER_ID_LEN);
-                            int previous_coins_amount = ctx_info~load_coins();
+                    ;; добавялем в спсиок тех, кому надо отправить USDT за их BID, 
+                    ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr_pivot);
+                    if exists {
+                        int order_id = ctx_info~load_uint(ORDER_ID_LEN);
+                        int previous_coins_amount = ctx_info~load_coins();
 
-                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                                STD_ADDR_LEN, ctx_std_addr_pivot, 
-                                begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_soxo_bid_amount + previous_coins_amount)
-                            ); 
-                        } else {
-                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                                STD_ADDR_LEN, ctx_std_addr_pivot, 
-                                begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(converted_ctx_soxo_bid_amount)
-                            ); 
-                        }
+                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                            STD_ADDR_LEN, ctx_std_addr_pivot, 
+                            begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_soxo_bid_amount + previous_coins_amount)
+                        ); 
+                    } else {
+                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                            STD_ADDR_LEN, ctx_std_addr_pivot, 
+                            begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(converted_ctx_soxo_bid_amount)
+                        ); 
+                    }
 
-                        ;; удаляем этот BID и уменьшаем счётчик количества BID'ов, так как полностью покрыли его нашим ASK
-                        ( ctx_bids, int suc ) = ctx_bids.udict_delete?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
-                        throw_unless(error:no_comments, suc);
+                    ;; удаляем этот BID и уменьшаем счётчик количества BID'ов, так как полностью покрыли его нашим ASK
+                    ( ctx_bids, int suc ) = ctx_bids.udict_delete?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
+                    throw_unless(error:no_comments, suc);
 
-                        ;; glob::bids_counter -= 1;
+                    ;; glob::bids_counter -= 1;
 
-                        ;; уменьшаем объём ask'a
-                        iterable_ask_usdt_amount -= converted_ctx_soxo_bid_amount;
+                    ;; уменьшаем объём ask'a
+                    iterable_ask_usdt_amount -= converted_ctx_soxo_bid_amount;
 
-                        pack_asks_bids(ctx_priority, asks, ctx_bids);
+                    pack_asks_bids(ctx_priority, asks, ctx_bids);
 
-                        ;; но мы идём дальше, чтобы постараться покрыть ASK полностью
+                    ;; но мы идём дальше, чтобы постараться покрыть ASK полностью
 
-                    } else { ;; dist < 0 (значит текущий BID с запасом покрывает оставшийся ASK)
+                } else { ;; dist < 0 (значит текущий BID с запасом покрывает оставшийся ASK)
 
-                        ;; добавялем в спсиок тех, кому надо отправить USDT за их BID, НО! 
-                        ;; добавляем ему не полный его BID, а только нужую для покрытия ASK часть, то есть iterable_ask_usdt_amount
-                        ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr_pivot);
-                        if exists {
-                            int order_id = ctx_info~load_uint(ORDER_ID_LEN);
-                            int previous_coins_amount = ctx_info~load_coins();
+                    ;; добавялем в спсиок тех, кому надо отправить USDT за их BID, НО! 
+                    ;; добавляем ему не полный его BID, а только нужую для покрытия ASK часть, то есть iterable_ask_usdt_amount
+                    ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr_pivot);
+                    if exists {
+                        int order_id = ctx_info~load_uint(ORDER_ID_LEN);
+                        int previous_coins_amount = ctx_info~load_coins();
 
-                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                                STD_ADDR_LEN, ctx_std_addr_pivot, 
-                                begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(iterable_ask_usdt_amount + previous_coins_amount)
-                            ); 
-
-                        } else {
-                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                                STD_ADDR_LEN, ctx_std_addr_pivot, 
-                                begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(iterable_ask_usdt_amount)
-                            ); 
-                        }
-
-                        ;; мы не удаляем текущий BID, а просто его уменьшаем на iterable_ask_usdt_amount, который "откусили" от него, и конвертируем обратно в SOXO
-                        int rem_soxo_amount = get_soxo(converted_ctx_soxo_bid_amount  - iterable_ask_usdt_amount);
-                        ctx_bids = ctx_bids.udict_set_builder(
-                            ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot, begin_cell().store_coins(rem_soxo_amount).store_uint(ctx_std_addr_pivot, STD_ADDR_LEN)
+                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                            STD_ADDR_LEN, ctx_std_addr_pivot, 
+                            begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(iterable_ask_usdt_amount + previous_coins_amount)
                         ); 
 
-                        ;; уменьшаем объём ask'a (обнуляем)
-                        iterable_ask_usdt_amount -= iterable_ask_usdt_amount;
-
-                        pack_asks_bids(ctx_priority, asks, ctx_bids);
-
-                        ;; выходим из цикла, так как мы уже покрыли ASK
-                        success = FALSE;
-                        ;; заканчиваем и глобальный цикл, который перебирает приоритеты
-                        ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
+                    } else {
+                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                            STD_ADDR_LEN, ctx_std_addr_pivot, 
+                            begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(iterable_ask_usdt_amount)
+                        ); 
                     }
-                }
-                
-            } until( ~ success );
 
-        }
+                    ;; мы не удаляем текущий BID, а просто его уменьшаем на iterable_ask_usdt_amount, который "откусили" от него, и конвертируем обратно в SOXO
+                    int rem_soxo_amount = get_soxo(converted_ctx_soxo_bid_amount  - iterable_ask_usdt_amount);
+                    ctx_bids = ctx_bids.udict_set_builder(
+                        ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot, begin_cell().store_coins(rem_soxo_amount).store_uint(ctx_std_addr_pivot, STD_ADDR_LEN)
+                    ); 
+
+                    ;; уменьшаем объём ask'a (обнуляем)
+                    iterable_ask_usdt_amount -= iterable_ask_usdt_amount;
+
+                    pack_asks_bids(ctx_priority, asks, ctx_bids);
+
+                    ;; выходим из цикла, так как мы уже покрыли ASK
+                    success = FALSE;
+                    ;; заканчиваем и глобальный цикл, который перебирает приоритеты
+                    ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
+                }
+            }
+                
+        } until( ~ success );
+
+        
 
         ctx_priority += 1;
     }

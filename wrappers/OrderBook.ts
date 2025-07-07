@@ -44,16 +44,6 @@ export type OrderBookConfig = {
     book_minter_address: Address;
     usdt_wallet_code: Cell;
     soxo_wallet_code: Cell;
-    porder_queues: Dictionary<bigint, porderQueuesType>
-
-    usdt_master_address: Address;
-    soxo_master_address: Address;
-
-    usdt_balance: number;
-    soxo_jetton_balance: number;
-    trading_session_price: number;
-    asks_counter: number;
-    bids_counter: number;
 };  
 
 export function orderBookConfigToCell(config: OrderBookConfig): Cell {
@@ -74,24 +64,6 @@ export function orderBookConfigToCell(config: OrderBookConfig): Cell {
                             .storeAddress(config.book_minter_address)
                             .storeRef(config.usdt_wallet_code)
                             .storeRef(config.soxo_wallet_code)
-                        .endCell()
-                    )
-                .endCell()
-            )
-
-            .storeDict(config.porder_queues)
-
-            .storeRef(
-                beginCell()
-                    .storeAddress(config.usdt_master_address)
-                    .storeAddress(config.soxo_master_address)
-                    .storeRef(
-                        beginCell()
-                            .storeCoins(config.usdt_balance)
-                            .storeCoins(config.soxo_jetton_balance)
-                            .storeCoins(config.trading_session_price)
-                            .storeUint(config.asks_counter, ASKS_BIDS_NUMBER_LEN)
-                            .storeUint(config.bids_counter, ASKS_BIDS_NUMBER_LEN)
                         .endCell()
                     )
                 .endCell()

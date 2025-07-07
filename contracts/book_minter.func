@@ -58,8 +58,7 @@ cell pack_order_book_init_storage( slice init::owner_address )  {
                             .store_ref(glob::soxo_channel_wallet_code)
                         .end_cell()
                     )
-                .end_cell()
-                
+                .end_cell()  
             )
         .end_cell()
     );

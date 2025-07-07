@@ -67,7 +67,6 @@ export class BookMinter implements Contract {
     async getOrderBookAddress(provider: ContractProvider, 
         opts: {
             ownerAddress: Address;
-            jettonAddress: Address;
         }
     ) : Promise<Address> {
         const result = await provider.get('get_order_book_address', [
@@ -76,13 +75,6 @@ export class BookMinter implements Contract {
                 cell: 
                     beginCell()
                         .storeAddress(opts.ownerAddress)
-                    .endCell()
-            } as TupleItemSlice,
-            {
-                type: 'slice',
-                cell: 
-                    beginCell()
-                        .storeAddress(opts.jettonAddress)
                     .endCell()
             } as TupleItemSlice
         ]);
