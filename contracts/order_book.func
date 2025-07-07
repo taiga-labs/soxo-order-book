@@ -24,19 +24,15 @@
     ├── ...
     ├── ...
     ├── ...
-    └── PRIORITIES_NUMBER
+    └── PRIORITIY_NUMBER
         │
         ├── asks 
         │   ├── key:   int --> std_addr
-        │   └── value: builder --> coins
-        │
-        ├── asks_number: int 
+        │   └── value: builder --> coins 
         │
         │── bids
-        │    ├── key:   int --> std_addr
-        │    └── value: builder --> coins
-        │
-        └── bids_number: int
+            ├── key:   int --> std_addr
+            └── value: builder --> coins
         
 
 -}
