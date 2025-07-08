@@ -353,11 +353,21 @@ describe('BookMinter', () => {
         let porderQueuesDict1 = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues1);
         const orders1: porderQueuesType = porderQueuesDict1.get(BigInt(BOBS_PRIORITY)) as porderQueuesType
 
-        console.log("BOB's ASK amount:", orders1.asks.get(getStdAddress(ACTBob.address))?.amount.toString())
+        let counter1: [number, number] = await SCorderBook.getCounters()
+
+        console.log("BOB's ASK amount:", orders1.asks.get(BigInt(counter1[0]))?.amount.toString())
 
         // Умножем BOBS_USDT_AMOUNT_FOR_ASK на 10**3, так как USDT в контракте хранятся с decimals 9 для унификации. Только перед отправкой сумма делится на 1000
-        expect(orders1.asks.get(getStdAddress(ACTBob.address))?.amount.toString()).toEqual((BOBS_USDT_AMOUNT_FOR_ASK * 10n**3n).toString())
+        expect(orders1.asks.get(BigInt(counter1[0]))?.amount.toString()).toEqual((BOBS_USDT_AMOUNT_FOR_ASK * 10n**3n).toString())
 
+        console.log("-----------[ 2 ]-----------")
+        console.log("ALICE USDT BALANCE:",  await SCusdtAliceWallet.getJettonBalance())
+        console.log("BOB SOXO BALANCE:", await SCsoxoBobWallet.getJettonBalance())
+        console.log("BOB USDT BALANCE:", await SCusdtBobWallet.getJettonBalance())
+        console.log("EVE USDT BALANCE:",  await SCusdtEveWallet.getJettonBalance())
+
+        console.log("ASKS:", orders1.asks.keys(), orders1.asks.values())
+        console.log("BIDS:", orders1.bids.keys(), orders1.bids.values())
 
         // ALICE MAKES BID! 1 SOXO ----------------------------------------------------------------------------------------------
         const ALICES_PRIORITY: number = 1;
@@ -458,21 +468,16 @@ describe('BookMinter', () => {
 
         let newBobsOrderExpectedAmount: bigint = BOBS_USDT_AMOUNT_FOR_ASK - 10n * 10n**6n
         
+        counter1 = await SCorderBook.getCounters()
 
         // Умножем BOBS_USDT_AMOUNT_FOR_ASK на 10**3, так как USDT в контракте хранятся с decimals 9 для унификации. Только перед отправкой сумма делится на 1000
-        expect(orders3.asks.get(getStdAddress(ACTBob.address))?.amount.toString()).toEqual((newBobsOrderExpectedAmount * 10n**3n).toString())
+        expect(orders3.asks.get(BigInt(counter1[0]))?.amount.toString()).toEqual((newBobsOrderExpectedAmount * 10n**3n).toString())
 
         console.log("-----------[ 3 ]-----------")
-
-        const bobsUSDTBalance1_ = await SCusdtBobWallet.getJettonBalance()
-        const bobsSOXOBalance1_ = await SCsoxoBobWallet.getJettonBalance()
-        const alicesUsdtBalance1_ = await SCusdtAliceWallet.getJettonBalance()
-        const eveSoxoBalance1_ = await SCusdtEveWallet.getJettonBalance()
-
-        console.log("ALICE USDT BALANCE:", alicesUsdtBalance1_)
-        console.log("BOB SOXO BALANCE:", bobsSOXOBalance1_)
-        console.log("BOB USDT BALANCE:", bobsUSDTBalance1_)
-        console.log("EVE SOXO BALANCE:", eveSoxoBalance1_)
+        console.log("ALICE USDT BALANCE:",  await SCusdtAliceWallet.getJettonBalance())
+        console.log("BOB SOXO BALANCE:", await SCsoxoBobWallet.getJettonBalance())
+        console.log("BOB USDT BALANCE:", await SCusdtBobWallet.getJettonBalance())
+        console.log("EVE USDT BALANCE:",  await SCusdtEveWallet.getJettonBalance())
 
         console.log("ASKS:", orders3.asks.keys(), orders3.asks.values())
         console.log("BIDS:", orders3.bids.keys(), orders3.bids.values())
@@ -495,7 +500,7 @@ describe('BookMinter', () => {
             )
         })
 
-        // ПРОВЕРКА ИСПОЛНЕНИЯ ОРДЕРА(подробнее в AskBid.md) ----------------------------------------------------------------------------------------------
+        // ПРОВЕРКА ИСПОЛНЕНИЯ ОРДЕРА ----------------------------------------------------------------------------------------------
 
         // От OrderBook USDT JETTON WALLET СК OrderBook'а (перевод EVE'е 10 USDT)
         expect(makeBidResult2.transactions).toHaveTransaction({
@@ -544,18 +549,84 @@ describe('BookMinter', () => {
         let porderQueuesDict4 = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues4);
         const orders4: porderQueuesType = porderQueuesDict4.get(BigInt(EVES_PRIORITY)) as porderQueuesType
 
-        expect(orders4.bids.get(getStdAddress(ACTEve.address))?.amount.toString()).toEqual((EVES_SOXO_AMOUNT_FOR_BID - 4n*10n**9n).toString())
+        counter1 = await SCorderBook.getCounters()
+
+        expect(orders4.bids.get(BigInt(counter1[1]))?.amount.toString()).toEqual((EVES_SOXO_AMOUNT_FOR_BID - 4n*10n**9n).toString())
 
         console.log("EVE STD ADDR", getStdAddress(ACTEve.address))
 
         console.log("-----------[ 4 ]-----------")
-        console.log("ALICE USDT BALANCE:", alicesUsdtBalance1)
-        console.log("BOB SOXO BALANCE:", bobsSOXOBalance1)
-        console.log("BOB USDT BALANCE:", bobsUSDTBalance1)
-        console.log("EVE USDT BALANCE:", eveUSDTBalance1)
+        console.log("ALICE USDT BALANCE:",  await SCusdtAliceWallet.getJettonBalance())
+        console.log("BOB SOXO BALANCE:", await SCsoxoBobWallet.getJettonBalance())
+        console.log("BOB USDT BALANCE:", await SCusdtBobWallet.getJettonBalance())
+        console.log("EVE USDT BALANCE:",  await SCusdtEveWallet.getJettonBalance())
 
         console.log("ASKS:", orders4.asks.keys(), orders4.asks.values())
         console.log("BIDS:", orders4.bids.keys(), orders4.bids.values())
+
+
+        await SCsoxoEveWallet.sendTransfer(ACTEve.getSender(), {
+            value: toNano("0.20"),
+            qi: BigInt(Math.floor(Date.now() / 1000)),
+            jettonAmount: EVES_SOXO_AMOUNT_FOR_BID / 5n,
+            recipientAddress: SCorderBook.address,
+            forwardTONAmount: toNano("0.15"),
+            forwardPayload: (
+                beginCell()
+                    .storeUint(0xbf4385, 32)
+                    .storeUint(EVES_PRIORITY, 16) 
+                .endCell()
+            )
+        })
+
+        let porderQueues5 = await SCorderBook.getPorderQueues()
+        let porderQueuesDict5 = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues5);
+        let orders5: porderQueuesType = porderQueuesDict5.get(BigInt(EVES_PRIORITY)) as porderQueuesType
+
+        console.log("ASKS:", orders5.asks.keys(), orders5.asks.values())
+        console.log("BIDS:", orders5.bids.keys(), orders5.bids.values())
+
+        await SCusdtBobWallet.sendTransfer(ACTBob.getSender(), {
+            value: toNano("0.20"),
+            qi: BigInt(Math.floor(Date.now() / 1000)),
+            jettonAmount: BOBS_USDT_AMOUNT_FOR_ASK,
+            recipientAddress: SCorderBook.address,
+            forwardTONAmount: toNano("0.15"),
+            forwardPayload: (
+                beginCell()
+                    .storeUint(0x845746, 32)
+                    .storeUint(BOBS_PRIORITY, 16) 
+                .endCell()
+            )
+        })
+
+        let porderQueues6 = await SCorderBook.getPorderQueues()
+        let porderQueuesDict6 = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues6);
+        let orders6 = porderQueuesDict6.get(BigInt(BOBS_PRIORITY)) as porderQueuesType
+
+        console.log("ASKS:", orders6.asks.keys(), orders6.asks.values())
+        console.log("BIDS:", orders6.bids.keys(), orders6.bids.values())
+
+        await SCusdtBobWallet.sendTransfer(ACTBob.getSender(), {
+            value: toNano("0.20"),
+            qi: BigInt(Math.floor(Date.now() / 1000)),
+            jettonAmount: BOBS_USDT_AMOUNT_FOR_ASK,
+            recipientAddress: SCorderBook.address,
+            forwardTONAmount: toNano("0.15"),
+            forwardPayload: (
+                beginCell()
+                    .storeUint(0x845746, 32)
+                    .storeUint(BOBS_PRIORITY, 16) 
+                .endCell()
+            )
+        })
+
+        porderQueues5 = await SCorderBook.getPorderQueues()
+        porderQueuesDict5 = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues5);
+        orders5 = porderQueuesDict5.get(BigInt(BOBS_PRIORITY)) as porderQueuesType
+
+        console.log("ASKS:", orders5.asks.keys(), orders5.asks.values())
+        console.log("BIDS:", orders5.bids.keys(), orders5.bids.values())
 
     }, TIMEOUT);
 });

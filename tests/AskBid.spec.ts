@@ -317,10 +317,12 @@ describe('BookMinter', () => {
         let porderQueuesDict1 = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues1);
         const orders1: porderQueuesType = porderQueuesDict1.get(BigInt(BOBS_PRIORITY)) as porderQueuesType
 
-        console.log("BOB's ASK amount:", orders1.asks.get(getStdAddress(ACTBob.address))?.amount.toString())
+        let counters0: [number, number] = await SCorderBook.getCounters()
+
+        console.log("BOB's ASK amount:", orders1.asks.get(BigInt(counters0[0]))?.amount.toString())
 
         // Умножем BOBS_USDT_AMOUNT_FOR_ASK на 10**3, так как USDT в контракте хранятся с decimals 9 для унификации. Только перед отправкой сумма делится на 1000
-        expect(orders1.asks.get(getStdAddress(ACTBob.address))?.amount.toString()).toEqual((BOBS_USDT_AMOUNT_FOR_ASK * 10n**3n).toString())
+        expect(orders1.asks.get(BigInt(counters0[0]))?.amount.toString()).toEqual((BOBS_USDT_AMOUNT_FOR_ASK * 10n**3n).toString())
 
 
         // ALICE MAKES BID! 1 SOXO ----------------------------------------------------------------------------------------------
@@ -427,8 +429,10 @@ describe('BookMinter', () => {
         // console.log(orders3.asks.keys())
         // console.log(orders3.asks.values())
 
+        let counter1: [number, number] = await SCorderBook.getCounters()
+
         // Умножем BOBS_USDT_AMOUNT_FOR_ASK на 10**3, так как USDT в контракте хранятся с decimals 9 для унификации. Только перед отправкой сумма делится на 1000
-        expect(orders3.asks.get(getStdAddress(ACTBob.address))?.amount.toString()).toEqual((newBobsOrderExpectedAmount * 10n**3n).toString())
+        expect(orders3.asks.get(BigInt(counter1[0]))?.amount.toString()).toEqual((newBobsOrderExpectedAmount * 10n**3n).toString())
 
     }, TIMEOUT);
 
@@ -557,8 +561,10 @@ describe('BookMinter', () => {
         let porderQueuesDict1 = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues1);
         const orders1: porderQueuesType = porderQueuesDict1.get(BigInt(ALICES_PRIORITY)) as porderQueuesType
 
+        let counter1: [number, number] = await SCorderBook.getCounters()
+      
         console.log("ALICES's BID amount:", orders1.bids.get(getStdAddress(ACTALice.address))?.amount.toString())
-        expect(orders1.bids.get(getStdAddress(ACTALice.address))?.amount.toString()).toEqual((ALICES_SOXO_AMOUNT_FOR_BID).toString())
+        expect(orders1.bids.get(BigInt(counter1[1]))?.amount.toString()).toEqual((ALICES_SOXO_AMOUNT_FOR_BID).toString())
 
 
         // BOB MAKES ASK! 20 USDT ----------------------------------------------------------------------------------------------
@@ -662,7 +668,10 @@ describe('BookMinter', () => {
         // console.log(orders3.asks.keys())
         // console.log(orders3.asks.values())
         // Умножем BOBS_USDT_AMOUNT_FOR_ASK на 10**3, так как USDT в контракте хранятся с decimals 9 для унификации. Только перед отправкой сумма делится на 1000
-        expect(orders3.asks.get(getStdAddress(ACTBob.address))?.amount.toString()).toEqual((newBobsOrderExpectedAmount * 10n**3n).toString())
+
+        counter1 = await SCorderBook.getCounters()
+
+        expect(orders3.asks.get(BigInt(counter1[0]))?.amount.toString()).toEqual((newBobsOrderExpectedAmount * 10n**3n).toString())
 
     }, TIMEOUT);
 });

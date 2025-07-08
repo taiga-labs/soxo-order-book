@@ -2,20 +2,23 @@ import { DICTADD } from '@tact-lang/compiler';
 import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Dictionary, DictionaryValue, Sender, SendMode } from '@ton/core';
 
 const FFREZE_LEN: number = 4;
-const ASKS_BIDS_NUMBER_LEN: number = 64;
+const ASKS_BIDS_ID_LEN: number = 64;
 const STD_ADDR_LEN: number = 256;
 
 export type orderInfoType = {
     amount: bigint
+    address: Address
 }
 
 export const orderDictionaryValue: DictionaryValue<orderInfoType> = {
     serialize(src, builder) {    
         builder.storeCoins(src.amount);
+        builder.storeAddress(src.address);
     },
     parse(src) {
         return {
             amount: src.loadCoins(),
+            address: src.loadAddress(),
         }
     },
 }
@@ -32,8 +35,8 @@ export const porderQueuesDictionaryValue: DictionaryValue<porderQueuesType> = {
     },
     parse(src) {
         return {
-            asks: src.loadDict(Dictionary.Keys.BigUint(STD_ADDR_LEN), orderDictionaryValue),
-            bids: src.loadDict(Dictionary.Keys.BigUint(STD_ADDR_LEN), orderDictionaryValue),
+            asks: src.loadDict(Dictionary.Keys.BigUint(ASKS_BIDS_ID_LEN), orderDictionaryValue),
+            bids: src.loadDict(Dictionary.Keys.BigUint(ASKS_BIDS_ID_LEN), orderDictionaryValue),
         }
     },
 }
@@ -168,10 +171,17 @@ export class OrderBook implements Contract {
         ]
     }
 
-
     async getInit(provider: ContractProvider): Promise<number> {
         let res = await provider.get('init?', []);
         return res.stack.readNumber()
+    }
+
+    async getCounters(provider: ContractProvider): Promise<[number, number]> {
+        let res = await provider.get('get_counters', []);
+        return [
+            res.stack.readNumber(),
+            res.stack.readNumber()
+        ]
     }
 
     async getAddresses(provider: ContractProvider): Promise<[Address, Address, Address, Address, Address]> {

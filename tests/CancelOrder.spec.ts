@@ -287,10 +287,12 @@ describe('BookMinter', () => {
         let porderQueuesDict2 = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues2);
         const orders2: porderQueuesType = porderQueuesDict2.get(BigInt(ALICES_PRIORITY)) as porderQueuesType
 
-        expect(orders2.bids.get(getStdAddress(ACTALice.address))?.amount.toString()).toEqual((ALICES_SOXO_AMOUNT_FOR_BID).toString())
+        let counter1: [number, number] = await SCorderBook.getCounters()
+
+        expect(orders2.bids.get(BigInt(counter1[1]))?.amount.toString()).toEqual((ALICES_SOXO_AMOUNT_FOR_BID).toString())
 
         const cancelBidOrderResult = await SCorderBook.sendCancelOrder(ACTALice.getSender(), {
-            value: toNano("0.01"),
+            value: toNano("0.07"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
             priority: ALICES_PRIORITY,
             orderType: BID_ID,
@@ -417,11 +419,13 @@ describe('BookMinter', () => {
         let porderQueuesDict2 = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues2);
         const orders2: porderQueuesType = porderQueuesDict2.get(BigInt(BOBS_PRIORITY)) as porderQueuesType
 
+        let counter1: [number, number] = await SCorderBook.getCounters()
+
         // Умножем BOBS_USDT_AMOUNT_FOR_ASK на 10**3, так как USDT в контракте хранятся с decimals 9 для унификации. Только перед отправкой сумма делится на 1000
-        expect(orders2.asks.get(getStdAddress(ACTBob.address))?.amount.toString()).toEqual((BOBS_USDT_AMOUNT_FOR_ASK * 10n**3n).toString())
+        expect(orders2.asks.get(BigInt(counter1[0]))?.amount.toString()).toEqual((BOBS_USDT_AMOUNT_FOR_ASK * 10n**3n).toString())
 
         const cancelBidOrderResult = await SCorderBook.sendCancelOrder(ACTBob.getSender(), {
-            value: toNano("0.01"),
+            value: toNano("0.07"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
             priority: BOBS_PRIORITY,
             orderType: ASK_ID,

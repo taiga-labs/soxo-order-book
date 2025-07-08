@@ -269,7 +269,9 @@ describe('BookMinter', () => {
         let porderQueuesDict = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues);
         const orders: porderQueuesType = porderQueuesDict.get(BigInt(ALICES_PRIORITY)) as porderQueuesType
 
-        expect(orders.bids.get(getStdAddress(ACTALice.address))?.amount.toString()).toEqual(ALICES_SOXO_AMOUNT_FOR_BID.toString())
+        let counters: [number, number] = await SCorderBook.getCounters()
+
+        expect(orders.bids.get(BigInt(counters[1]))?.amount.toString()).toEqual(ALICES_SOXO_AMOUNT_FOR_BID.toString())
 
     }, TIMEOUT);
 });

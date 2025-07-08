@@ -10,7 +10,7 @@ import { buildjettonMinterContentCell } from '../helpers/metadata';
 import { JettonFactory } from '../wrappers/JettonFactory';
 import { KeyPair, mnemonicNew, mnemonicToPrivateKey } from "@ton/crypto";
 import { JettonWallet, WalletData } from '../wrappers/JettonWallet';
-import { assert } from 'console';
+import { assert, log } from 'console';
 
 const TIMEOUT: number = 420000;
 const ORDER_QUEUES_KEY_LEN: number = 16;
@@ -262,14 +262,16 @@ describe('BookMinter', () => {
             success: true,
         });
 
-        // Check BOB's BID Amount ----------------------------------------------------------------------------------------------
+        // Check BOB's ASK Amount ----------------------------------------------------------------------------------------------
 
         const porderQueues = await SCorderBook.getPorderQueues()
         let porderQueuesDict = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues);
         const orders: porderQueuesType = porderQueuesDict.get(BigInt(BOBS_PRIORITY)) as porderQueuesType
 
+        let counters: [number, number] = await SCorderBook.getCounters()
+
         // Умножем BOBS_SOXO_AMOUNT_FOR_BID на 10**3, так как USDT в контракте хранятся с decimals 9 для унификации. Только перед отправкой сумма делится на 1000
-        expect(orders.asks.get(getStdAddress(ACTBob.address))?.amount.toString()).toEqual((BOBS_USDT_AMOUNT_FOR_BID * 10n**3n).toString())
+        expect(orders.asks.get(BigInt(counters[0]))?.amount.toString()).toEqual((BOBS_USDT_AMOUNT_FOR_BID * 10n**3n).toString())
 
     }, TIMEOUT);
 });
