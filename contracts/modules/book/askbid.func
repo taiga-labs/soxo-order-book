@@ -19,7 +19,6 @@
                 int dist = iterable_bid - ctx_ask_usdt_amount;
 
                 if dist == 0 {
-
                     ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr_pivot);
                     if exists {
                         int order_id = ctx_info~load_uint(ORDER_ID_LEN);
@@ -93,7 +92,7 @@
                         
                     ctx_asks = ctx_asks.udict_set_builder(
                         ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot, 
-                        begin_cell().store_coins(ctx_ask_usdt_amount - iterable_bid).store_uint(ctx_std_addr_pivot, STD_ADDR_LEN)
+                        begin_cell().store_coins(ctx_ask_usdt_amount - iterable_bid)
                     ); 
 
                     iterable_bid -= iterable_bid;
@@ -130,7 +129,7 @@
         ;; iterate over all bids of this prtiority
         int ctx_std_addr_pivot = -1;
         int success = TRUE;
-            
+
         ;; bids[iter]
         do {
             ( ctx_std_addr_pivot, slice bid_info, success ) = ctx_bids.udict_get_next?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
@@ -144,7 +143,7 @@
 
                 ;; perfect fit!
                 if dist == 0 { ;; лучший вариант, текущий BID идеально покрыл оставшийся ASK => останваоиваем поиски, мы полностью покрыи наш ASK!
-
+                
                     ;; добавялем в спсиок тех, кому надо отправить USDT за их BID, 
                     ;; так как их SOXO, которые они отдали контакру, чтобы сделать этот BID - уйдут тому, чей ASK покрывается в этом цикле
 
@@ -235,7 +234,7 @@
                     ;; мы не удаляем текущий BID, а просто его уменьшаем на iterable_ask_usdt_amount, который "откусили" от него, и конвертируем обратно в SOXO
                     int rem_soxo_amount = get_soxo(converted_ctx_soxo_bid_amount  - iterable_ask_usdt_amount);
                     ctx_bids = ctx_bids.udict_set_builder(
-                        ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot, begin_cell().store_coins(rem_soxo_amount).store_uint(ctx_std_addr_pivot, STD_ADDR_LEN)
+                        ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot, begin_cell().store_coins(rem_soxo_amount)
                     ); 
 
                     ;; уменьшаем объём ask'a (обнуляем)

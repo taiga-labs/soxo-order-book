@@ -19,6 +19,8 @@ const int MIN_USDT_ASK =      1000000;
 const int BIT =        1;
 const int ONE_TON =    1000000000;
 const int ONE_TONem2 = 10000000;
+const int ONE_TONem3 = 30000000;
+const int ONE_TONem5 = 50000000;
 
 const int ANSWER_CONSTANT = 42;
 

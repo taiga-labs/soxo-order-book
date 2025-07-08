@@ -50,7 +50,7 @@ describe('BookMinter', () => {
 
     let blockchain: Blockchain;
     let ACTdeployer: SandboxContract<TreasuryContract>;
-    let ACTALice: SandboxContract<TreasuryContract>;
+    // let ACTALice: SandboxContract<TreasuryContract>;
     let ACTBob: SandboxContract<TreasuryContract>;
     let ACTAdmin: SandboxContract<TreasuryContract>;
 
@@ -61,10 +61,9 @@ describe('BookMinter', () => {
     let SCsoxoMinter: SandboxContract<JettonMinter>;
     let SCusdtMinter: SandboxContract<JettonMinter>;
 
-    let SCsoxoAliceWallet: SandboxContract<JettonWallet>;
+    // let SCsoxoAliceWallet: SandboxContract<JettonWallet>;
     let SCusdtBobWallet: SandboxContract<JettonWallet>;
-
-    let SCsoxoOrderBookWallet: SandboxContract<JettonWallet>;
+;
     let SCusdtOrderBookWallet: SandboxContract<JettonWallet>;
 
     beforeEach(async () => {
@@ -136,17 +135,6 @@ describe('BookMinter', () => {
             soxo_wallet_code: soxoWalletCode,
         }, orderBookCode));
 
-        // ALICE AND HER SOXO WALLET ----------------------------------------------------------------------------------------------
-        ACTALice = await blockchain.treasury('ALice')
-        SCsoxoAliceWallet = blockchain.openContract(JettonWallet.createFromConfig({
-            status: 0,
-            balance: 0,
-            owner: ACTALice.address,
-            minter: SCsoxoMinter.address,
-            walletCode: soxoWalletCode
-        }, soxoWalletCode));
-
-
         // BOB AND HIS USDT WALLET ----------------------------------------------------------------------------------------------
         ACTBob = await blockchain.treasury('Bob')
         SCusdtBobWallet = blockchain.openContract(JettonWallet.createFromConfig({
@@ -157,15 +145,7 @@ describe('BookMinter', () => {
             walletCode: usdtWalletCode
         }, usdtWalletCode));
 
-        // ORDER BOOK SOXO AND USDT WALLETS ----------------------------------------------------------------------------------------------
-
-        SCsoxoOrderBookWallet = blockchain.openContract(JettonWallet.createFromConfig({
-            status: 0,
-            balance: 0,
-            owner: SCorderBook.address,
-            minter: SCsoxoMinter.address,
-            walletCode: soxoWalletCode
-        }, soxoWalletCode));
+        // ORDER BOOK USDT WALLET ----------------------------------------------------------------------------------------------
 
         SCusdtOrderBookWallet = blockchain.openContract(JettonWallet.createFromConfig({
             status: 0,
@@ -193,7 +173,7 @@ describe('BookMinter', () => {
         const deployResult = await SCbookMinter.sendDeployOrderBook(ACTAdmin.getSender(), {
             value: toNano("0.05"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
-            soxoJettonAddress: SCsoxoMinter.address,
+            soxoJettonMasterAddress: SCsoxoMinter.address,
         });
 
         expect(deployResult.transactions).toHaveTransaction({
@@ -240,14 +220,14 @@ describe('BookMinter', () => {
         const usdtJettonData: jettonData = await SCusdtMinter.getJettonData();
         expect(usdtJettonData.totalSupply).toEqual(AmountToMint)
 
-        // MAKE ASK! ----------------------------------------------------------------------------------------------
+        // BOB MAKES ASK! ----------------------------------------------------------------------------------------------
         const BOBS_PRIORITY: number = 1;
-        const BOBS_SOXO_AMOUNT_FOR_BID: bigint = 20n * 10n**6n;
+        const BOBS_USDT_AMOUNT_FOR_BID: bigint = 20n * 10n**6n;
 
         const makeAskResult = await SCusdtBobWallet.sendTransfer(ACTBob.getSender(), {
             value: toNano("0.15"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
-            jettonAmount: BOBS_SOXO_AMOUNT_FOR_BID,
+            jettonAmount: BOBS_USDT_AMOUNT_FOR_BID,
             recipientAddress: SCorderBook.address,
             forwardTONAmount: toNano("0.065"),
             forwardPayload: (
@@ -282,14 +262,14 @@ describe('BookMinter', () => {
             success: true,
         });
 
-        // Check Bib's BID Amount ----------------------------------------------------------------------------------------------
+        // Check BOB's BID Amount ----------------------------------------------------------------------------------------------
 
         const porderQueues = await SCorderBook.getPorderQueues()
         let porderQueuesDict = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues);
         const orders: porderQueuesType = porderQueuesDict.get(BigInt(BOBS_PRIORITY)) as porderQueuesType
 
         // Умножем BOBS_SOXO_AMOUNT_FOR_BID на 10**3, так как USDT в контракте хранятся с decimals 9 для унификации. Только перед отправкой сумма делится на 1000
-        expect(orders.asks.get(getStdAddress(ACTBob.address))?.amount.toString()).toEqual((BOBS_SOXO_AMOUNT_FOR_BID * 10n**3n).toString())
+        expect(orders.asks.get(getStdAddress(ACTBob.address))?.amount.toString()).toEqual((BOBS_USDT_AMOUNT_FOR_BID * 10n**3n).toString())
 
     }, TIMEOUT);
 });

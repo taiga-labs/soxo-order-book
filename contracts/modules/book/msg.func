@@ -22,7 +22,7 @@
         begin_cell()
             .store_uint(BOUNCEABLE, 6)
             .store_slice(jw_address)
-            .store_coins(ONE_TONem2)
+            .store_coins(ONE_TONem5)
             .store_statinit_ref_and_body_ref(
                 ctx_si,
                 begin_cell()
@@ -45,12 +45,12 @@
     slice jw_address = null();
 
     if order_id == ASK_ID {
-        ;; usdt::calculate_jetton_wallet_state_init for mainnet
         jw_address = soxo::calculate_jetton_wallet_address(ctx_si);
     } elseif order_id == BID_ID {
-        jw_address = usdt::calculate_jetton_wallet_address(ctx_si);
+        ;; usdt::calculate_jetton_wallet_address for mainnet
+        jw_address = soxo::calculate_jetton_wallet_address(ctx_si);
     } else {
-        throw(error::invalid_order_id );
+        throw(error::invalid_order_type);
     }
 
     send_jetton_ordinary(ctx_si, to_owner_address, jetton_amount, jw_address, query_id, mode);

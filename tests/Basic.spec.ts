@@ -188,7 +188,7 @@ describe('BookMinter', () => {
         const deployResult = await SCbookMinter.sendDeployOrderBook(ACTdeployer.getSender(), {
             value: toNano("0.05"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
-            soxoJettonAddress: SCsoxoMinter.address,
+            soxoJettonMasterAddress: SCsoxoMinter.address,
         });
 
         expect(deployResult.transactions).toHaveTransaction({

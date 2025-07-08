@@ -49,7 +49,7 @@ export class BookMinter implements Contract {
         opts: {
             value: bigint;
             qi: bigint;
-            soxoJettonAddress: Address;
+            soxoJettonMasterAddress: Address;
         }
     ) {
         await provider.internal(via, {
@@ -59,7 +59,7 @@ export class BookMinter implements Contract {
                 beginCell()
                     .storeUint(0xf4874876, 32)
                     .storeUint(opts.qi, 64)
-                    .storeAddress(opts.soxoJettonAddress)
+                    .storeAddress(opts.soxoJettonMasterAddress)
                 .endCell(),
         });
     }

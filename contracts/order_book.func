@@ -12,8 +12,8 @@
 #include "modules/book/askbid.func";
 
 
-;; выпалта за BID - отправялем USDT(1)
-;; выплата за ASK - отправляем SOXO(2)
+;; выпалта за BID - отправялем USDT(1). Отправляем SOXO
+;; выплата за ASK - отправляем SOXO(2). Отправляем USDT
 
 {-
     glob::porder_queues
@@ -128,7 +128,7 @@
             ctx_dict = asks;
             cell ctx_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::soxo_master_address, init::soxo_wallet_code);
         } else {
-            throw(error::invalid_order_id );
+            throw(error::invalid_order_type);
         }
 
         ( _, slice order_info, int exists ) = bids.udict_delete_get?(STD_ADDR_LEN, sender_address_std);
