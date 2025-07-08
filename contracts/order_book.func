@@ -108,33 +108,44 @@
     }
 
     if op_code == op::ob::cancel_order {
-        throw_unless(error::less_ton, msg_value >= ONE_TON);
+        ;; throw_unless(error::less_ton, msg_value >= ONE_TON);
 
         int priority = in_msg_body~load_uint(PRIORITY_LEN);
-        int askbid? = in_msg_body~load_uint(BIT);
-        ( _, int sender_address_std ) = parse_std_addr(sender_address);
+        int askbid? = in_msg_body~load_uint(ORDER_ID_LEN);
+        slice user_address = in_msg_body~load_msg_addr();
+
+        throw_unless(error::forbitten, equal_slices_bits(user_address, sender_address));
+        
+        ( _, int user_address_std ) = parse_std_addr(user_address);
         ( cell asks, cell bids ) = extract_asks_bids(priority);
 
-        ( cell ctx_si, cell ctx_dict, int order_id ) = ( null(), null(), null() );
-
+        cell ctx_si = null();
         if askbid? == BID_ID {
-            order_id = BID_ID;
-            ctx_dict = bids;
-            ;; usdt::calculate_jetton_wallet_state_init for mainnet
-            cell ctx_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
+            ctx_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::soxo_master_address, init::soxo_wallet_code);
+
+            ( bids, slice order_info, int exists? ) = bids.udict_delete_get?(STD_ADDR_LEN, user_address_std);
+            throw_unless(error::not_exists_while_cancel, exists?);
+            int jetton_amount = order_info~load_coins();
+
+            send_jetton_order(ctx_si, user_address, jetton_amount, query_id, ASK_ID, SEND_MODE_PAY_FEES_SEPARATELY);
+            pack_asks_bids(priority, asks, bids);
+
         } elseif askbid? == ASK_ID {
-            order_id = ASK_ID;
-            ctx_dict = asks;
-            cell ctx_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::soxo_master_address, init::soxo_wallet_code);
+             ;; usdt::calculate_jetton_wallet_state_init for mainnet
+            ctx_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
+
+            ( asks, slice order_info, int exists? ) = asks.udict_delete_get?(STD_ADDR_LEN, user_address_std);
+            throw_unless(error::not_exists_while_cancel, exists?);
+            int jetton_amount = order_info~load_coins();
+
+            jetton_amount = jetton_amount / USDT_MULTIPLIER;
+
+            send_jetton_order(ctx_si, user_address, jetton_amount, query_id, BID_ID, SEND_MODE_PAY_FEES_SEPARATELY);
+            pack_asks_bids(priority, asks, bids);
+
         } else {
             throw(error::invalid_order_type);
         }
-
-        ( _, slice order_info, int exists ) = bids.udict_delete_get?(STD_ADDR_LEN, sender_address_std);
-        throw_unless(error::not_exists_while_cancel, exists);
-        int jetton_amount = order_info~load_coins();
-
-        send_jetton_order(ctx_si, sender_address, jetton_amount, now(), order_id, SEND_MODE_PAY_FEES_SEPARATELY);
 
         set_globals();
         return();

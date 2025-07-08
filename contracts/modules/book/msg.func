@@ -51,7 +51,7 @@
         jw_address = soxo::calculate_jetton_wallet_address(ctx_si);
     } else {
         throw(error::invalid_order_type);
-    }
+    }   
 
     send_jetton_ordinary(ctx_si, to_owner_address, jetton_amount, jw_address, query_id, mode);
 }

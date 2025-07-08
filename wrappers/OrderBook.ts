@@ -126,7 +126,30 @@ export class OrderBook implements Contract {
                 beginCell()
                     .storeUint(0x325aba5, 32)
                     .storeUint(opts.qi, 64)
-                    .storeInt(opts.freeze == true ? -1 : 0,4)
+                    .storeInt(opts.freeze == true ? -1 : 0, 4)
+                .endCell(),
+        });
+    }
+
+    async sendCancelOrder(provider: ContractProvider, via: Sender, 
+        opts: {
+            value: bigint;
+            qi: bigint;
+            priority: number;
+            orderType: number;
+            userAddress: Address
+        }
+    ) {
+        await provider.internal(via, {
+            value: opts.value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(0x3567, 32)
+                    .storeUint(opts.qi, 64)
+                    .storeUint(opts.priority, 16)
+                    .storeUint(opts.orderType, 4)
+                    .storeAddress(opts.userAddress)
                 .endCell(),
         });
     }

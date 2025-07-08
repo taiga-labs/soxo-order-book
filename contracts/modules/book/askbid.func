@@ -93,10 +93,7 @@
                     ctx_asks = ctx_asks.udict_set_builder(
                         STD_ADDR_LEN, ctx_std_addr_pivot, 
                         begin_cell().store_coins(ctx_ask_usdt_amount - iterable_bid)
-                    ); 
-
-                    ~strdump("BOB??");
-                    ~dump(ctx_std_addr_pivot);
+                    );
 
                     iterable_bid -= iterable_bid;
                     pack_asks_bids(ctx_priority, ctx_asks, bids);
@@ -335,8 +332,6 @@
     }
 
     ifnot resulting_orders_dict.dict_empty?() == TRUE {
-        ~strdump("ALICE??");
-        ~dump(bid_address_std);
         int usdt_amount_to_bider = get_usdt(bid_soxo_amount - remaining_bid_amount); 
     
         resulting_orders_dict = resulting_orders_dict.udict_set_builder(
