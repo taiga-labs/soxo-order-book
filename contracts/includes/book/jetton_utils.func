@@ -1,5 +1,3 @@
-#include "stdlib.func";
-
 cell soxo::pack_jetton_wallet_data(int status, int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
     return  (
         begin_cell()
@@ -41,7 +39,7 @@ slice soxo::calculate_jetton_wallet_address(cell state_init) inline {
             .store_uint(4, 3)      ;; 0b100 = addr_std$10 tag; No anycast
             .store_int(BASECHAIN, 8)
             .store_uint(cell_hash(state_init), 256)
-            .end_cell().begin_parse()
+        .end_cell().begin_parse()
     );
 }
 

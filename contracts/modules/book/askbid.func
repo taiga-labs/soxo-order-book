@@ -11,7 +11,7 @@
         int success = TRUE;
 
         do {
-            ( ctx_std_addr_pivot, slice ask_info, success ) = ctx_asks.udict_get_next?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
+            ( ctx_std_addr_pivot, slice ask_info, success ) = ctx_asks.udict_get_next?(STD_ADDR_LEN, ctx_std_addr_pivot);
 
             if success {
                 int ctx_ask_usdt_amount = ask_info~load_coins();
@@ -64,7 +64,7 @@
                         ); 
                     }
 
-                    ( ctx_asks, int suc ) = ctx_asks.udict_delete?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
+                    ( ctx_asks, int suc ) = ctx_asks.udict_delete?(STD_ADDR_LEN, ctx_std_addr_pivot);
                     throw_unless(error:no_comments, suc);
 
                     ;; glob::asks_counter -= 1;
@@ -91,9 +91,12 @@
                     }
                         
                     ctx_asks = ctx_asks.udict_set_builder(
-                        ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot, 
+                        STD_ADDR_LEN, ctx_std_addr_pivot, 
                         begin_cell().store_coins(ctx_ask_usdt_amount - iterable_bid)
                     ); 
+
+                    ~strdump("BOB??");
+                    ~dump(ctx_std_addr_pivot);
 
                     iterable_bid -= iterable_bid;
                     pack_asks_bids(ctx_priority, ctx_asks, bids);
@@ -132,7 +135,7 @@
 
         ;; bids[iter]
         do {
-            ( ctx_std_addr_pivot, slice bid_info, success ) = ctx_bids.udict_get_next?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
+            ( ctx_std_addr_pivot, slice bid_info, success ) = ctx_bids.udict_get_next?(STD_ADDR_LEN, ctx_std_addr_pivot);
 
             if success {
             int ctx_soxo_bid_amount = bid_info~load_coins();
@@ -164,7 +167,7 @@
                     }
 
                     ;; удаляем этот BID и уменьшаем счётчик количества BID'ов, так как полностью покрыли его нашим ASK
-                    ( ctx_bids, int suc ) = ctx_bids.udict_delete?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
+                    ( ctx_bids, int suc ) = ctx_bids.udict_delete?(STD_ADDR_LEN, ctx_std_addr_pivot);
                     throw_unless(error:no_comments, suc);
 
                     ;; glob::bids_counter -= 1;
@@ -198,7 +201,7 @@
                     }
 
                     ;; удаляем этот BID и уменьшаем счётчик количества BID'ов, так как полностью покрыли его нашим ASK
-                    ( ctx_bids, int suc ) = ctx_bids.udict_delete?(ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot);
+                    ( ctx_bids, int suc ) = ctx_bids.udict_delete?(STD_ADDR_LEN, ctx_std_addr_pivot);
                     throw_unless(error:no_comments, suc);
 
                     ;; glob::bids_counter -= 1;
@@ -234,7 +237,7 @@
                     ;; мы не удаляем текущий BID, а просто его уменьшаем на iterable_ask_usdt_amount, который "откусили" от него, и конвертируем обратно в SOXO
                     int rem_soxo_amount = get_soxo(converted_ctx_soxo_bid_amount  - iterable_ask_usdt_amount);
                     ctx_bids = ctx_bids.udict_set_builder(
-                        ASKS_BIDS_NUMBER_LEN, ctx_std_addr_pivot, begin_cell().store_coins(rem_soxo_amount)
+                        STD_ADDR_LEN, ctx_std_addr_pivot, begin_cell().store_coins(rem_soxo_amount)
                     ); 
 
                     ;; уменьшаем объём ask'a (обнуляем)
@@ -292,7 +295,6 @@
     }
 
     ifnot resulting_orders_dict.dict_empty?() == TRUE { ;; если после попытки разрешить ASK словарь сделок не пустой, тогда исполянем всё, что там есть
-
         ;; также добавляем в словарь сделок, которые надо исполнить того, кто сделал ASK. отдаём ему SOXO за его USDT, которые удалось прокрыть BID'ами при изначальной проверке
         int soxo_amount_to_asker = get_soxo(ask_jetton_amount - remaining_ask_amount); 
         resulting_orders_dict = resulting_orders_dict.udict_set_builder(
@@ -333,7 +335,8 @@
     }
 
     ifnot resulting_orders_dict.dict_empty?() == TRUE {
-
+        ~strdump("ALICE??");
+        ~dump(bid_address_std);
         int usdt_amount_to_bider = get_usdt(bid_soxo_amount - remaining_bid_amount); 
     
         resulting_orders_dict = resulting_orders_dict.udict_set_builder(

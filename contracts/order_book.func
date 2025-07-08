@@ -5,8 +5,8 @@
 #include "includes/book/usdt_utils.func";
 #include "includes/book/jetton_utils.func";
 
-#include "modules/book/msg.func";
 #include "modules/book/store.func";
+#include "modules/book/msg.func";
 #include "modules/book/utils.func";
 #include "modules/book/order.func";
 #include "modules/book/askbid.func";
@@ -99,7 +99,6 @@
 
         if inner_op == op::ob::make_bid {
             slice ctx_soxo_jw = soxo::calculate_user_jetton_wallet_address(my_address(), glob::soxo_master_address, init::soxo_wallet_code);
-
             throw_unless(error::not_soxo_jetton, equal_slices_bits(sender_address, ctx_soxo_jw));
             add_bid(priority, from_address, msg_jetton_amount, query_id);
             set_globals();

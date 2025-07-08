@@ -371,6 +371,9 @@ describe('BookMinter', () => {
 
         console.log("SCsoxoBobWallet:", SCsoxoBobWallet.address.toString())
         console.log("SCusdtAliceWallet:", SCusdtAliceWallet.address.toString())
+
+        console.log("BOB's STD ADDRESS:", getStdAddress(ACTBob.address))
+        console.log("ALICES's STD ADDRESS:", getStdAddress(ACTALice.address))
         
         // ПРОВЕРКА ИСПОЛНЕНИЯ ОРДЕРА(подробнее в TraceTest.md) ----------------------------------------------------------------------------------------------
 
@@ -420,12 +423,13 @@ describe('BookMinter', () => {
 
         let newBobsOrderExpectedAmount: bigint = BOBS_USDT_AMOUNT_FOR_ASK / 2n
 
-        console.log("ALICE:", getStdAddress(ACTALice.address))
-        console.log("BOB:", getStdAddress(ACTBob.address))
-        console.log(orders3.asks.keys())
-        console.log(orders3.asks.values())
+        // console.log("ALICE:", getStdAddress(ACTALice.address))
+        // console.log("BOB:", getStdAddress(ACTBob.address))
+        // console.log(orders3.asks.keys())
+        // console.log(orders3.asks.values())
+
         // Умножем BOBS_USDT_AMOUNT_FOR_ASK на 10**3, так как USDT в контракте хранятся с decimals 9 для унификации. Только перед отправкой сумма делится на 1000
-        // expect(orders3.asks.get(getStdAddress(ACTBob.address))?.amount.toString()).toEqual((newBobsOrderExpectedAmount * 10n**3n).toString())
+        expect(orders3.asks.get(getStdAddress(ACTBob.address))?.amount.toString()).toEqual((newBobsOrderExpectedAmount * 10n**3n).toString())
 
     }, TIMEOUT);
 });
