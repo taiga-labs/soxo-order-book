@@ -12,6 +12,6 @@ export async function run(provider: NetworkProvider) {
     await bookMinter.sendDeployOrderBook(provider.sender(), {
         value: toNano("0.05"),
         qi: BigInt(Math.floor(Date.now() / 1000)),
-        soxoJettonAddress: Address.parse(SOXO_MASTER_ADDRESS),
+        soxoJettonMasterAddress: Address.parse(SOXO_MASTER_ADDRESS),
     });
 }

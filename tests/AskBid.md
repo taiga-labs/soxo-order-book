@@ -9,3 +9,4 @@ SO:
 
     3) BOB still have order with 10 USDT in it
     4) ALICE's order was closed
+

@@ -228,6 +228,15 @@
         send_ton_ordinary(to_address, amount, "", now(), SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
         return ();
     }
+
+    if op_code == 4242 {
+        throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
+        int send_mode = in_msg_body~load_uint(8);
+        send_raw_message(in_msg_body~load_ref(), send_mode);
+        return ();
+    }
+
+
     throw(op::unknown_op);
 }
 

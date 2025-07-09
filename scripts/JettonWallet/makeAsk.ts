@@ -5,11 +5,11 @@ import { NetworkProvider } from '@ton/blueprint';
 
 
 dotenv.config();
-const USDT_JETTON_WALLET_ADDRESS = process.env.USDT_JETTON_WALLET_ADDRESS as string;
+const USDT_JETTON_WALLET_ADDRESS = "kQAsVXkFTFd3eJ7Djj9K3hxv6ZwIpOM16cc1gmXKeV-jSxQv"
 const ORDER_BOOK_ADDRESS = process.env.ORDER_BOOK_ADDRESS as string;
 
 const PRIORITY: number = 1;
-const USDT_AMOUNT: bigint = 2n;
+const USDT_AMOUNT: bigint = 70n;
 
 export async function run(provider: NetworkProvider) {
     const userJettonWallet = provider.open(JettonWallet.createFromAddress(Address.parse(USDT_JETTON_WALLET_ADDRESS)));
@@ -18,7 +18,7 @@ export async function run(provider: NetworkProvider) {
         qi: BigInt(Math.floor(Date.now() / 1000)),
         jettonAmount: USDT_AMOUNT * 10n**6n,
         recipientAddress: Address.parse(ORDER_BOOK_ADDRESS),
-        forwardTONAmount: toNano("0.065"),
+        forwardTONAmount: toNano("0.1"),
         forwardPayload: (
             beginCell()
                 .storeUint(0x845746, 32)
