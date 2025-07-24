@@ -1,0 +1,25 @@
+
+;; выпалта за BID - отправялем USDT(1). Отправляем SOXO
+;; выплата за ASK - отправляем SOXO(2). Отправляем USDT
+
+{-
+    glob::porder_queues
+    │
+    ├── 0
+    ├── 1
+    ├── 2
+    ├── ...
+    ├── ...
+    ├── ...
+    └── PRIORITIY_NUMBER
+        │
+        ├── asks 
+        │   ├── key:   int --> std_addr
+        │   └── value: builder --> coins 
+        │
+        │── bids
+            ├── key:   int --> std_addr
+            └── value: builder --> coins
+        
+
+-}

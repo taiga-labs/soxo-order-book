@@ -17,6 +17,7 @@ const ASK_ID: number = 2;
 
 const TIMEOUT: number = 4200000;
 const ORDER_QUEUES_KEY_LEN: number = 16;
+const ORDER_BOOK_ADMIN_MNEMONIC = process.env.ORDER_BOOK_ADMIN_MNEMONIC as string;
 // const USDT_MINTER_CODE = process.env.USDT_MINTER_CODE as string;
 
 function getStdAddress(address: Address) {
@@ -34,13 +35,19 @@ describe('BookMinter', () => {
     let soxoMinterCode: Cell
     let usdtMinterCode: Cell
 
-    let mnemonics: string[]
-    let keyPair: KeyPair
+    let JFMnem: string[]
+    let JFKeyPair: KeyPair
+
+    let OBAMnem: string[]
+    let OBAkeyPair: KeyPair
 
     beforeAll(async () => {
-        mnemonics = await mnemonicNew();
-        keyPair = await mnemonicToPrivateKey(mnemonics); 
-        console.log("JettonFactory Mnemonic: ", mnemonics)
+        JFMnem = await mnemonicNew();
+        JFKeyPair = await mnemonicToPrivateKey(JFMnem); 
+        console.log("JettonFactory Mnemonic: ", JFMnem)
+
+        OBAMnem = ORDER_BOOK_ADMIN_MNEMONIC.split(" ")
+        OBAkeyPair = await mnemonicToPrivateKey(OBAMnem);
 
         bookMinterCode = await compile('BookMinter');
         orderBookCode = await compile('OrderBook');
@@ -81,7 +88,7 @@ describe('BookMinter', () => {
 
         // JETTON FACTORY ----------------------------------------------------------------------------------------------
         SCjettonFactory  = blockchain.openContract(JettonFactory.createFromConfig({
-            AdminPublicKey: keyPair.publicKey,
+            AdminPublicKey: JFKeyPair.publicKey,
             Seqno: 0n,
             AdminAddress: ACTAdmin.address,
             MinterCode: soxoMinterCode,
@@ -213,6 +220,7 @@ describe('BookMinter', () => {
             value: toNano("0.05"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
             soxoJettonMasterAddress: SCsoxoMinter.address,
+            adminPbk: OBAkeyPair.publicKey
         });
 
         expect(deployResult.transactions).toHaveTransaction({
@@ -264,6 +272,7 @@ describe('BookMinter', () => {
         // ALICE MAKES BID! 1 SOXO ----------------------------------------------------------------------------------------------
         const ALICES_PRIORITY: number = 1;
         const ALICES_SOXO_AMOUNT_FOR_BID: bigint = 1n * 10n**9n;
+        
 
         await SCsoxoAliceWallet.sendTransfer(ACTALice.getSender(), {
             value: toNano("0.20"),
@@ -273,10 +282,12 @@ describe('BookMinter', () => {
             forwardTONAmount: toNano("0.15"),
             forwardPayload: (
                 beginCell()
+                    .storeUint(await SCorderBook.getSeqno(), 32)
                     .storeUint(0xbf4385, 32)
                     .storeUint(ALICES_PRIORITY, 16) 
                 .endCell()
-            )
+            ),
+            secretKey: OBAkeyPair.secretKey
         })
 
         let orderBookSOXOBalance: bigint = await SCsoxoOrderBookWallet.getJettonBalance();
@@ -296,7 +307,9 @@ describe('BookMinter', () => {
             qi: BigInt(Math.floor(Date.now() / 1000)),
             priority: ALICES_PRIORITY,
             orderType: BID_ID,
-            userAddress: ACTALice.address
+            userAddress: ACTALice.address,
+            secretKey: OBAkeyPair.secretKey,
+            seqno: await SCorderBook.getSeqno(),
         })
 
         expect(cancelBidOrderResult.transactions).toHaveTransaction({
@@ -345,6 +358,7 @@ describe('BookMinter', () => {
             value: toNano("0.05"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
             soxoJettonMasterAddress: SCsoxoMinter.address,
+            adminPbk: OBAkeyPair.publicKey,
         });
 
         expect(deployResult.transactions).toHaveTransaction({
@@ -405,10 +419,12 @@ describe('BookMinter', () => {
             forwardTONAmount: toNano("0.15"),
             forwardPayload: (
                 beginCell()
+                .storeUint(await SCorderBook.getSeqno(), 32)
                     .storeUint(0x845746, 32)
                     .storeUint(BOBS_PRIORITY, 16) 
                 .endCell()
-            )
+            ),
+            secretKey: OBAkeyPair.secretKey,
         })
 
         let orderBookUSDTBalance: bigint = await SCusdtOrderBookWallet.getJettonBalance();
@@ -429,7 +445,9 @@ describe('BookMinter', () => {
             qi: BigInt(Math.floor(Date.now() / 1000)),
             priority: BOBS_PRIORITY,
             orderType: ASK_ID,
-            userAddress: ACTBob.address
+            userAddress: ACTBob.address,
+            secretKey: OBAkeyPair.secretKey,
+            seqno: await SCorderBook.getSeqno(),
         })
 
         expect(cancelBidOrderResult.transactions).toHaveTransaction({

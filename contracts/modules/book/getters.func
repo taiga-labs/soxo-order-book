@@ -1,0 +1,44 @@
+( int, int, int ) get_order_book_prices( ) method_id {
+    load_globals();
+
+    return (
+        glob::usdt_balance,
+        glob::soxo_jetton_balance,
+        glob::trading_session_price
+    );
+
+}
+
+( slice, slice, slice, slice, slice ) get_order_book_addresses( ) method_id {
+    load_globals();
+    return (
+        init::owner_address,
+        init::admin_address,
+        init::book_minter_address,
+
+        glob::usdt_master_address,
+        glob::soxo_master_address
+    );
+}
+
+cell get_porder_queues() method_id {
+    load_globals();
+    return glob::porder_queues;
+}
+
+int init?() method_id {
+    return load_globals();
+}
+
+(int, int) get_counters() method_id {
+    load_globals();
+    return (
+        glob::asks_counter,
+        glob::bids_counter
+    );
+}
+
+int get_seqno() method_id {
+    load_globals();
+    return glob::seqno;
+}

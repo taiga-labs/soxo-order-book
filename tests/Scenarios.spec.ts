@@ -13,6 +13,7 @@ import { JettonWallet, WalletData } from '../wrappers/JettonWallet';;
 
 const TIMEOUT: number = 4200000;
 const ORDER_QUEUES_KEY_LEN: number = 16;
+const ORDER_BOOK_ADMIN_MNEMONIC = process.env.ORDER_BOOK_ADMIN_MNEMONIC as string;
 // const USDT_MINTER_CODE = process.env.USDT_MINTER_CODE as string;
 
 function getStdAddress(address: Address) {
@@ -30,13 +31,16 @@ describe('BookMinter', () => {
     let soxoMinterCode: Cell
     let usdtMinterCode: Cell
 
-    let mnemonics: string[]
-    let keyPair: KeyPair
+    let JFMnem: string[]
+    let JFKeyPair: KeyPair
+
+    let OBAMnem: string[]
+    let OBAkeyPair: KeyPair
 
     beforeAll(async () => {
-        mnemonics = await mnemonicNew();
-        keyPair = await mnemonicToPrivateKey(mnemonics); 
-        console.log("JettonFactory Mnemonic: ", mnemonics)
+        JFMnem = await mnemonicNew();
+        JFKeyPair = await mnemonicToPrivateKey(JFMnem); 
+        console.log("JettonFactory Mnemonic: ", JFMnem)
 
         bookMinterCode = await compile('BookMinter');
         orderBookCode = await compile('OrderBook');
@@ -79,9 +83,12 @@ describe('BookMinter', () => {
         ACTAdmin = await blockchain.treasury('Minters And Factory Owner');
         ACTAdmin = await blockchain.treasury('orderBookOwner')
 
+        OBAMnem = ORDER_BOOK_ADMIN_MNEMONIC.split(" ")
+        OBAkeyPair = await mnemonicToPrivateKey(OBAMnem);
+
         // JETTON FACTORY ----------------------------------------------------------------------------------------------
         SCjettonFactory  = blockchain.openContract(JettonFactory.createFromConfig({
-            AdminPublicKey: keyPair.publicKey,
+            AdminPublicKey: JFKeyPair.publicKey,
             Seqno: 0n,
             AdminAddress: ACTAdmin.address,
             MinterCode: soxoMinterCode,
@@ -232,6 +239,7 @@ describe('BookMinter', () => {
             value: toNano("0.05"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
             soxoJettonMasterAddress: SCsoxoMinter.address,
+            adminPbk: OBAkeyPair.publicKey,
         });
 
         expect(deployResult.transactions).toHaveTransaction({
@@ -318,10 +326,13 @@ describe('BookMinter', () => {
             forwardTONAmount: toNano("0.15"),
             forwardPayload: (
                 beginCell()
+                    .storeUint(await SCorderBook.getSeqno(), 32)
                     .storeUint(0x845746, 32)
                     .storeUint(BOBS_PRIORITY, 16) 
                 .endCell()
-            )
+            ),
+            secretKey: OBAkeyPair.secretKey,
+
         })
 
         // От Боба её USDT jetton wallet
@@ -381,10 +392,12 @@ describe('BookMinter', () => {
             forwardTONAmount: toNano("0.15"),
             forwardPayload: (
                 beginCell()
+                    .storeUint(await SCorderBook.getSeqno(), 32)
                     .storeUint(0xbf4385, 32)
                     .storeUint(ALICES_PRIORITY, 16) 
                 .endCell()
-            )
+            ),
+            secretKey: OBAkeyPair.secretKey,
         })
 
         // От Алисы её SOXO jetton wallet
@@ -494,10 +507,12 @@ describe('BookMinter', () => {
             forwardTONAmount: toNano("0.15"),
             forwardPayload: (
                 beginCell()
+                    .storeUint(await SCorderBook.getSeqno(), 32)
                     .storeUint(0xbf4385, 32)
                     .storeUint(EVES_PRIORITY, 16) 
                 .endCell()
-            )
+            ),
+            secretKey: OBAkeyPair.secretKey,
         })
 
         // ПРОВЕРКА ИСПОЛНЕНИЯ ОРДЕРА ----------------------------------------------------------------------------------------------
@@ -573,10 +588,12 @@ describe('BookMinter', () => {
             forwardTONAmount: toNano("0.15"),
             forwardPayload: (
                 beginCell()
+                    .storeUint(await SCorderBook.getSeqno(), 32)
                     .storeUint(0xbf4385, 32)
                     .storeUint(EVES_PRIORITY, 16) 
                 .endCell()
-            )
+            ),
+            secretKey: OBAkeyPair.secretKey,
         })
 
         let porderQueues5 = await SCorderBook.getPorderQueues()
@@ -594,10 +611,12 @@ describe('BookMinter', () => {
             forwardTONAmount: toNano("0.15"),
             forwardPayload: (
                 beginCell()
+                    .storeUint(await SCorderBook.getSeqno(), 32)
                     .storeUint(0x845746, 32)
                     .storeUint(BOBS_PRIORITY, 16) 
                 .endCell()
-            )
+            ),
+            secretKey: OBAkeyPair.secretKey,
         })
 
         let porderQueues6 = await SCorderBook.getPorderQueues()
@@ -615,10 +634,12 @@ describe('BookMinter', () => {
             forwardTONAmount: toNano("0.15"),
             forwardPayload: (
                 beginCell()
+                    .storeUint(await SCorderBook.getSeqno(), 32)
                     .storeUint(0x845746, 32)
                     .storeUint(BOBS_PRIORITY, 16) 
                 .endCell()
-            )
+            ),
+            secretKey: OBAkeyPair.secretKey,
         })
 
         porderQueues5 = await SCorderBook.getPorderQueues()

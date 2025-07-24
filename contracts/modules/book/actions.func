@@ -1,0 +1,189 @@
+
+() action::init(slice in_msg_body, int op_code) impure inline {
+    glob::porder_queues = new_dict(); 
+    init_order_queues();
+
+    glob::usdt_master_address   = in_msg_body~load_msg_addr();
+    glob::soxo_master_address   = in_msg_body~load_msg_addr();
+    glob::usdt_balance          = 0;
+    glob::soxo_jetton_balance   = 0;
+    glob::trading_session_price = 0;
+
+    glob::asks_counter =          0;
+    glob::bids_counter =          0;
+            
+    glob::seqno =                 0;
+    glob::admin_pbk =             in_msg_body~load_uint(256);
+
+    set_globals();
+}
+
+() action::jetton_transfer_notification(slice in_msg_body, int msg_value, int op_code, slice sender_address, int query_id) impure inline {
+    throw_if(error::freezed, glob::ffreeze == TRUE);
+
+    int msg_jetton_amount = in_msg_body~load_coins();
+    slice from_address = in_msg_body~load_msg_addr();
+    in_msg_body~skip_bits(BIT);
+
+    slice inner_payload = in_msg_body~load_ref().begin_parse();
+    slice signed_slice = chek_sig(inner_payload);
+
+    int inner_op = signed_slice~load_op();
+    int priority = signed_slice~load_uint(PRIORITY_LEN);
+
+    if inner_op == op::ob::make_ask {
+        ;; usdt::calculate_jetton_wallet_address
+        slice ctx_usdt_jw = soxo::calculate_user_jetton_wallet_address(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
+
+        throw_unless(error::not_usdt_jetton, equal_slices_bits(sender_address, ctx_usdt_jw));
+        add_ask(priority, from_address, msg_jetton_amount, query_id);
+        set_globals();
+        return ();
+    }
+
+    if inner_op == op::ob::make_bid {
+        slice ctx_soxo_jw = soxo::calculate_user_jetton_wallet_address(my_address(), glob::soxo_master_address, init::soxo_wallet_code);
+        throw_unless(error::not_soxo_jetton, equal_slices_bits(sender_address, ctx_soxo_jw));
+        add_bid(priority, from_address, msg_jetton_amount, query_id);
+        set_globals();
+        return ();
+    } 
+    throw(error::not_an_order_id);
+    
+}
+
+
+() action::cancel_order(slice in_msg_body, int msg_value, int op_code, slice sender_address, int query_id) impure inline {
+
+    throw_unless(error::less_ton, msg_value >= ONE_TONem7);
+
+    slice signed_slice = chek_sig(in_msg_body);
+
+    int priority = signed_slice~load_uint(PRIORITY_LEN);
+    int askbid? = signed_slice~load_uint(ORDER_ID_LEN);
+    slice user_address = signed_slice~load_msg_addr();
+
+    throw_unless(error::forbitten, equal_slices_bits(user_address, sender_address));
+        
+    ( _, int user_address_std ) = parse_std_addr(user_address);
+    ( cell asks, cell bids ) = extract_asks_bids(priority);
+
+    cell ctx_si = null();
+    if askbid? == BID_ID {
+        ctx_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::soxo_master_address, init::soxo_wallet_code);
+
+        int success = TRUE;
+        int pivot_id = -1;
+        int exists? = FALSE;
+        int jetton_amount = 0;
+
+        ;; CHECK EXISTENCE
+        do {
+            ( pivot_id, slice bid_info, success ) = bids.udict_get_next?(ASKS_BIDS_ID_LEN, pivot_id);
+            if success {
+                int bid_amount = bid_info~load_coins();
+                slice addr = bid_info~load_msg_addr();
+                if equal_slices_bits(addr, user_address) {  
+                    success = FALSE;
+                    exists? = TRUE;
+                    jetton_amount = bid_amount;
+                    ( bids, _, int suc ) = bids.udict_delete_get?(ASKS_BIDS_ID_LEN, pivot_id);
+                    throw_unless(error:no_comments, suc);
+                }
+            }
+        } until (~ success);
+
+        glob::soxo_jetton_balance -= jetton_amount;
+        throw_unless(error::not_exists_while_cancel, exists?);
+       
+        send_jetton_order(ctx_si, user_address, jetton_amount, query_id, ASK_ID, SEND_MODE_PAY_FEES_SEPARATELY);
+        pack_asks_bids(priority, asks, bids);
+
+    } elseif askbid? == ASK_ID {
+        ;; usdt::calculate_jetton_wallet_state_init for mainnet
+        ctx_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
+
+        int success = TRUE;
+        int pivot_id = -1;
+        int exists? = FALSE;
+        int jetton_amount = 0;
+
+        ;; CHECK EXISTENCE
+        do {
+            ( pivot_id, slice ask_info, success ) = asks.udict_get_next?(ASKS_BIDS_ID_LEN, pivot_id);
+            if success {
+                int ask_amount = ask_info~load_coins();
+                slice addr = ask_info~load_msg_addr();
+                if equal_slices_bits(addr, user_address) {  
+                    success = FALSE;
+                    exists? = TRUE;
+                    jetton_amount = ask_amount;
+                    ( asks, _, int suc ) = asks.udict_delete_get?(ASKS_BIDS_ID_LEN, pivot_id);
+                    throw_unless(error:no_comments, suc);
+                }
+            }
+        } until (~ success);
+
+        throw_unless(error::not_exists_while_cancel, exists?);
+        jetton_amount = jetton_amount / USDT_MULTIPLIER;
+
+        glob::usdt_balance -= jetton_amount;
+
+        send_jetton_order(ctx_si, user_address, jetton_amount, query_id, BID_ID, SEND_MODE_PAY_FEES_SEPARATELY);
+        pack_asks_bids(priority, asks, bids);
+
+    } else {
+        throw(error::invalid_order_type);
+    }
+
+    set_globals();
+    return();
+    
+}
+
+int action::admin_actions(slice in_msg_body, int op_code, slice sender_address) impure inline {
+     if op_code == op::ob::recv_new_session {
+        throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
+        glob::trading_session_price = in_msg_body~load_coins();
+        set_globals();
+        return 0;
+    }
+
+    if op_code == op::ob::fix_balances {
+        throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
+        glob::usdt_balance = in_msg_body~load_coins();
+        glob::soxo_jetton_balance = in_msg_body~load_coins();
+        set_globals();
+        return 0;
+    }
+
+    if op_code == op::ob::freeze {
+        throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
+        glob::ffreeze = in_msg_body~load_int(FFREZE_LEN);
+        set_globals();
+        return 0;
+    }
+
+    if op_code == op::ob::change_admin {
+        throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
+        init::admin_address = in_msg_body~load_msg_addr();
+        set_globals();
+        return 0;
+    }
+
+    if op_code == op::ob::claim_comission {
+        throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
+        int amount = in_msg_body~load_coins();
+        slice to_address = in_msg_body~load_msg_addr();
+        send_ton_ordinary(to_address, amount, "", now(), SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+        return 0;
+    }
+
+    if op_code == 4242 {
+        throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
+        int send_mode = in_msg_body~load_uint(8);
+        send_raw_message(in_msg_body~load_ref(), send_mode);
+        return 0;
+    }
+    return 1;
+}

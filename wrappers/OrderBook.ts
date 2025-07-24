@@ -1,4 +1,4 @@
-import { DICTADD } from '@tact-lang/compiler';
+import { sign } from "@ton/crypto";
 import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Dictionary, DictionaryValue, Sender, SendMode } from '@ton/core';
 
 const FFREZE_LEN: number = 4;
@@ -140,9 +140,22 @@ export class OrderBook implements Contract {
             qi: bigint;
             priority: number;
             orderType: number;
-            userAddress: Address
+            userAddress: Address;
+            seqno: number;
+            secretKey: Buffer;
         }
     ) {
+
+        const baseBody: Cell = 
+            beginCell()
+                .storeUint(opts.seqno, 32)
+                .storeUint(opts.priority, 16)
+                .storeUint(opts.orderType, 4)
+                .storeAddress(opts.userAddress)
+            .endCell()
+
+        const signature: Buffer = sign(baseBody.hash(), opts.secretKey)
+
         await provider.internal(via, {
             value: opts.value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
@@ -150,9 +163,8 @@ export class OrderBook implements Contract {
                 beginCell()
                     .storeUint(0x3567, 32)
                     .storeUint(opts.qi, 64)
-                    .storeUint(opts.priority, 16)
-                    .storeUint(opts.orderType, 4)
-                    .storeAddress(opts.userAddress)
+                    .storeRef(baseBody)
+                    .storeBuffer(signature)
                 .endCell(),
         });
     }
@@ -182,6 +194,11 @@ export class OrderBook implements Contract {
             res.stack.readNumber(),
             res.stack.readNumber()
         ]
+    }
+
+    async getSeqno(provider: ContractProvider): Promise<number> {
+        let res = await provider.get('get_seqno', []);
+        return res.stack.readNumber()
     }
 
     async getAddresses(provider: ContractProvider): Promise<[Address, Address, Address, Address, Address]> {

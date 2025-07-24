@@ -1,0 +1,14 @@
+slice chek_sig(slice payload) impure inline {
+    cell signed_cell = payload~load_ref();
+    var signature = payload~load_bits(512);
+
+    int signature_valid = check_signature(cell_hash(signed_cell), signature, glob::admin_pbk);
+    throw_if(error::invalid_signature, signature_valid == 0);
+        
+    slice signed_slice = signed_cell.begin_parse();
+
+    int ctx_seqno = signed_slice~load_op();
+    throw_unless(error::invalid_seqno, ctx_seqno == glob::seqno);
+    glob::seqno += 1;
+    return signed_slice;
+} 

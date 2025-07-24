@@ -1,3 +1,4 @@
+import { sign } from "@ton/crypto";
 import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode, TupleItemSlice } from '@ton/core';
 
 export type BookMinterConfig = {
@@ -50,6 +51,7 @@ export class BookMinter implements Contract {
             value: bigint;
             qi: bigint;
             soxoJettonMasterAddress: Address;
+            adminPbk: Buffer,
         }
     ) {
         await provider.internal(via, {
@@ -60,7 +62,8 @@ export class BookMinter implements Contract {
                     .storeUint(0xf4874876, 32)
                     .storeUint(opts.qi, 64)
                     .storeAddress(opts.soxoJettonMasterAddress)
-                .endCell(),
+                    .storeBuffer(opts.adminPbk)
+                .endCell()
         });
     }
 

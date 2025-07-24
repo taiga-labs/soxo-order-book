@@ -124,6 +124,7 @@ slice calculate_order_book_address( cell state_init ) inline {
 
     if (op_code == op::bm::deploy_order_book) { 
         slice soxo_jetton_master_address = in_msg_body~load_msg_addr();
+        int admin_pbk = in_msg_body~load_uint(256);
 
         deploy_new_order_book(
             pack_order_book_init_storage(
@@ -134,6 +135,7 @@ slice calculate_order_book_address( cell state_init ) inline {
                 .store_query_id(FALSE)
                 .store_slice(glob::usdt_master_address)
                 .store_slice(soxo_jetton_master_address)
+                .store_uint(admin_pbk, 256)
             .end_cell(), 
             my_balance, msg_value
         );

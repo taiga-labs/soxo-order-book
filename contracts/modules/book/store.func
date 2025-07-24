@@ -19,6 +19,9 @@ global int glob::bids_counter;
 
 global int glob::ffreeze;
 
+global int glob::admin_pbk;
+global int glob::seqno;
+
 int load_globals( ) impure {
     slice smc_storage =         get_data().begin_parse();
 
@@ -49,6 +52,10 @@ int load_globals( ) impure {
         glob::asks_counter =          conis_info~load_uint(ASKS_BIDS_NUMBER_LEN);
         glob::bids_counter =          conis_info~load_uint(ASKS_BIDS_NUMBER_LEN);
 
+        slice sign_info =             smc_storage~load_ref().begin_parse();
+        glob::seqno =                 sign_info~load_uint(32);
+        glob::admin_pbk =             sign_info~load_uint(256);
+
         return TRUE;
     } else {
         glob::porder_queues =         null();
@@ -62,6 +69,9 @@ int load_globals( ) impure {
 
         glob::asks_counter =          null();
         glob::bids_counter =          null();
+
+        glob::seqno =                 null();
+        glob::admin_pbk =             null();
 
         return FALSE;
     }
@@ -105,6 +115,13 @@ int load_globals( ) impure {
                             .store_uint(glob::bids_counter, ASKS_BIDS_NUMBER_LEN)
                         .end_cell()
                     )
+                .end_cell()
+            )
+
+            .store_ref(
+                begin_cell()
+                    .store_uint(glob::seqno, 32)
+                    .store_uint(glob::admin_pbk, 256)
                 .end_cell()
             )
         .end_cell()

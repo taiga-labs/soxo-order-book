@@ -1,3 +1,4 @@
+import { sign } from "@ton/crypto";
 import { Opcodes } from './includes/OpCodes';
 import { Address, beginCell, Builder, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode } from '@ton/core';
 
@@ -55,6 +56,7 @@ export class JettonWallet implements Contract {
             forwardTONAmount: bigint,
             recipientAddress: Address,
             forwardPayload: Cell | null,
+            secretKey: Buffer,
         }
     ) {
         let msgBody: Builder =                 
@@ -68,11 +70,22 @@ export class JettonWallet implements Contract {
                 .storeCoins(opts.forwardTONAmount);
         
         if (opts.forwardPayload != null) {
-            msgBody.storeBit(1).storeRef(opts.forwardPayload)
+            let baseBody = opts.forwardPayload;
+            
+            const signature: Buffer = sign(baseBody.hash(), opts.secretKey)
+
+            msgBody.storeBit(1).storeRef(
+                beginCell()
+                    .storeRef(baseBody)
+                    .storeBuffer(signature)
+                .endCell()
+            )
+
         } else {
             msgBody.storeBit(0)
         }
 
+        
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             value : opts.value + opts.forwardTONAmount,
