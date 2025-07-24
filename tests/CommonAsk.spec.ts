@@ -11,6 +11,8 @@ import { JettonFactory } from '../wrappers/JettonFactory';
 import { KeyPair, mnemonicNew, mnemonicToPrivateKey } from "@ton/crypto";
 import { JettonWallet, WalletData } from '../wrappers/JettonWallet';
 import { assert, log } from 'console';
+import { USDTJettonMinter } from '../wrappers/USDTJettonMinter';
+import { USDTJettonWallet } from '../wrappers/USDTJettonWallet';
 
 const TIMEOUT: number = 420000;
 const ORDER_QUEUES_KEY_LEN: number = 16;
@@ -50,9 +52,9 @@ describe('BookMinter', () => {
         orderBookCode = await compile('OrderBook');
         jettonFactoryCode = await compile('JettonFactory');
         indexWalletCode = await compile('JettonWallet');
-        usdtWalletCode = await compile('JettonWallet'); // Cell.fromHex(USDT_WALLET_CODE)
+        usdtWalletCode = await compile('USDTJettonWallet');
         indexMinterCode = await compile('JettonMinter');
-        usdtMinterCode = await compile('JettonMinter'); // Cell.fromHex(USDT_MINTER_CODE)
+        usdtMinterCode = await compile('USDTJettonMinter');
     }, TIMEOUT);
 
     let blockchain: Blockchain;
@@ -66,12 +68,12 @@ describe('BookMinter', () => {
 
     let SCjettonFactory: SandboxContract<JettonFactory>;
     let SCindexMinter: SandboxContract<JettonMinter>;
-    let SCusdtMinter: SandboxContract<JettonMinter>;
+    let SCusdtMinter: SandboxContract<USDTJettonMinter>;
 
     // let SCindexAliceWallet: SandboxContract<JettonWallet>;
-    let SCusdtBobWallet: SandboxContract<JettonWallet>;
+    let SCusdtBobWallet: SandboxContract<USDTJettonWallet>;
 ;
-    let SCusdtOrderBookWallet: SandboxContract<JettonWallet>;
+    let SCusdtOrderBookWallet: SandboxContract<USDTJettonWallet>;
 
     beforeEach(async () => {
         blockchain = await Blockchain.create();
@@ -105,20 +107,16 @@ describe('BookMinter', () => {
         }, indexMinterCode))
         
         // USDT JETTON MINTER ----------------------------------------------------------------------------------------------
-        SCusdtMinter = blockchain.openContract(JettonMinter.createFromConfig({
+        SCusdtMinter = blockchain.openContract(USDTJettonMinter.createFromConfig({
             totalSupply: 0n,                                            
-            managerAddress: ACTAdmin.address,
-            MinterContnet: buildjettonMinterContentCell({                              
-                image: "https://cache.tonapi.io/imgproxy/T3PB4s7oprNVaJkwqbGg54nexKE0zzKhcrPv8jcWYzU/rs:fill:200:200:1/g:no/aHR0cHM6Ly90ZXRoZXIudG8vaW1hZ2VzL2xvZ29DaXJjbGUucG5n.webp",
-                decimals: "6",
-                name: "TEST USDT",
-                symbol: "TUSDT",
-                description: "Test Tether Token for Tether USD"
-            }),
             adminAddress: ACTAdmin.address,          
-            transferAdminAddress: ACTAdmin.address,
-            jettonWalletCode: await compile('JettonWallet'),
-            FactoryAddress: SCjettonFactory.address
+            nextAdminAddress: ACTAdmin.address,
+            jettonWalletCode: await compile('USDTJettonWallet'),
+            metadataURI: 
+                beginCell()
+                    .storeUint(0, 8)
+                    .storeStringTail("https://raw.githubusercontent.com/taiga-labs/public-gists/refs/heads/main/index_test_usdt_uri.json")
+                .endCell()
         }, usdtMinterCode))
 
         // BOOK MINTER ----------------------------------------------------------------------------------------------
@@ -144,22 +142,20 @@ describe('BookMinter', () => {
 
         // BOB AND HIS USDT WALLET ----------------------------------------------------------------------------------------------
         ACTBob = await blockchain.treasury('Bob')
-        SCusdtBobWallet = blockchain.openContract(JettonWallet.createFromConfig({
+        SCusdtBobWallet = blockchain.openContract(USDTJettonWallet.createFromConfig({
             status: 0,
             balance: 0,
             owner: ACTBob.address,
             minter: SCusdtMinter.address,
-            walletCode: usdtWalletCode
         }, usdtWalletCode));
 
         // ORDER BOOK USDT WALLET ----------------------------------------------------------------------------------------------
 
-        SCusdtOrderBookWallet = blockchain.openContract(JettonWallet.createFromConfig({
+        SCusdtOrderBookWallet = blockchain.openContract(USDTJettonWallet.createFromConfig({
             status: 0,
             balance: 0,
             owner: SCorderBook.address,
             minter: SCusdtMinter.address,
-            walletCode: usdtWalletCode
         }, usdtWalletCode));
     
     }, TIMEOUT);
@@ -217,10 +213,10 @@ describe('BookMinter', () => {
         // MINT 100_000 USDT TO BOB ----------------------------------------------------------------------------------------------
         const AmountToMint: bigint = 100_000n * 10n**6n;
         await SCusdtMinter.sendMint(ACTAdmin.getSender(), {
-            value: toNano('0.08'),
+            value: toNano('5'),
             queryId: BigInt(Math.floor(Date.now() / 1000)),
             toAddress: ACTBob.address,
-            tonAmount: toNano('0.05'),
+            tonAmount: toNano('2'),
             jettonAmountToMint: AmountToMint,
             fromAddress: SCusdtMinter.address
         })

@@ -25,8 +25,7 @@
             int order_id = 0;
 
             if order_type == BID_ID {
-                ;; usdt::calculate_jetton_wallet_state_init for mainnet
-                cell usdt_si = index::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
+                cell usdt_si = usdt::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
                 ctx_si = usdt_si;
 
                 order_amount = order_amount / USDT_MULTIPLIER; 

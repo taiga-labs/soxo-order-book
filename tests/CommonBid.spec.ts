@@ -11,6 +11,7 @@ import { JettonFactory } from '../wrappers/JettonFactory';
 import { KeyPair, mnemonicNew, mnemonicToPrivateKey } from "@ton/crypto";
 import { JettonWallet, WalletData } from '../wrappers/JettonWallet';
 import { assert } from 'console';
+import { USDTJettonMinter } from '../wrappers/USDTJettonMinter';
 
 const TIMEOUT: number = 420000;
 
@@ -53,9 +54,9 @@ describe('BookMinter', () => {
         orderBookCode = await compile('OrderBook');
         jettonFactoryCode = await compile('JettonFactory');
         indexWalletCode = await compile('JettonWallet');
-        usdtWalletCode = await compile('JettonWallet'); // Cell.fromHex(USDT_WALLET_CODE)
+        usdtWalletCode = await compile('USDTJettonWallet');
         indexMinterCode = await compile('JettonMinter');
-        usdtMinterCode = await compile('JettonMinter'); // Cell.fromHex(USDT_MINTER_CODE)
+        usdtMinterCode = await compile('USDTJettonMinter');
     }, TIMEOUT);
 
     let blockchain: Blockchain;
@@ -69,7 +70,7 @@ describe('BookMinter', () => {
 
     let SCjettonFactory: SandboxContract<JettonFactory>;
     let SCindexMinter: SandboxContract<JettonMinter>;
-    let SCusdtMinter: SandboxContract<JettonMinter>;
+    let SCusdtMinter: SandboxContract<USDTJettonMinter>;
 
     let SCindexAliceWallet: SandboxContract<JettonWallet>;
     // let SCusdtBobWallet: SandboxContract<JettonWallet>;
@@ -109,20 +110,16 @@ describe('BookMinter', () => {
         }, indexMinterCode))
         
         // USDT JETTON MINTER ----------------------------------------------------------------------------------------------
-        SCusdtMinter = blockchain.openContract(JettonMinter.createFromConfig({
+        SCusdtMinter = blockchain.openContract(USDTJettonMinter.createFromConfig({
             totalSupply: 0n,                                            
-            managerAddress: ACTAdmin.address,
-            MinterContnet: buildjettonMinterContentCell({                              
-                image: "https://cache.tonapi.io/imgproxy/T3PB4s7oprNVaJkwqbGg54nexKE0zzKhcrPv8jcWYzU/rs:fill:200:200:1/g:no/aHR0cHM6Ly90ZXRoZXIudG8vaW1hZ2VzL2xvZ29DaXJjbGUucG5n.webp",
-                decimals: "6",
-                name: "TEST USDT",
-                symbol: "TUSDT",
-                description: "Test Tether Token for Tether USD"
-            }),
             adminAddress: ACTAdmin.address,          
-            transferAdminAddress: ACTAdmin.address,
-            jettonWalletCode: await compile('JettonWallet'),
-            FactoryAddress: SCjettonFactory.address
+            nextAdminAddress: ACTAdmin.address,
+            jettonWalletCode: await compile('USDTJettonWallet'),
+            metadataURI: 
+                beginCell()
+                    .storeUint(0, 8)
+                    .storeStringTail("https://raw.githubusercontent.com/taiga-labs/public-gists/refs/heads/main/index_test_usdt_uri.json")
+                .endCell()
         }, usdtMinterCode))
 
         // BOOK MINTER ----------------------------------------------------------------------------------------------

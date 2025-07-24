@@ -33,7 +33,7 @@
 
     if inner_op == op::ob::make_ask {
         ;; usdt::calculate_jetton_wallet_address
-        slice ctx_usdt_jw = index::calculate_user_jetton_wallet_address(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
+        slice ctx_usdt_jw = usdt::calculate_user_jetton_wallet_address(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
 
         throw_unless(error::not_usdt_jetton, equal_slices_bits(sender_address, ctx_usdt_jw));
         add_ask(priority, from_address, msg_jetton_amount, query_id);
@@ -100,8 +100,7 @@
         pack_asks_bids(priority, asks, bids);
 
     } elseif askbid? == ASK_ID {
-        ;; usdt::calculate_jetton_wallet_state_init for mainnet
-        ctx_si = index::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
+        ctx_si = usdt::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
 
         int success = TRUE;
         int pivot_id = -1;

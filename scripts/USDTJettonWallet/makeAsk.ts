@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { toNano, Address, Cell, beginCell } from '@ton/core';
-import { JettonWallet } from '../../wrappers/JettonWallet';
+import { USDTJettonWallet } from '../../wrappers/USDTJettonWallet';
 import { NetworkProvider } from '@ton/blueprint';
 import { mnemonicToPrivateKey } from "@ton/crypto";
 import { OrderBook } from '../../wrappers/OrderBook';
@@ -14,7 +14,7 @@ const PRIORITY: number = 1;
 const USDT_AMOUNT: bigint = 70n;
 
 export async function run(provider: NetworkProvider) {
-    const userJettonWallet = provider.open(JettonWallet.createFromAddress(Address.parse(USDT_JETTON_WALLET_ADDRESS)));
+    const userJettonWallet = provider.open(USDTJettonWallet.createFromAddress(Address.parse(USDT_JETTON_WALLET_ADDRESS)));
     const orderBook = provider.open(OrderBook.createFromAddress(Address.parse(ORDER_BOOK_ADDRESS)));
 
     let mnemonics: string[] = ORDER_BOOK_ADMIN_MNEMONIC.split(" ")

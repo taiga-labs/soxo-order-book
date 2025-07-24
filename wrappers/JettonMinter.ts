@@ -276,9 +276,7 @@ export class JettonMinter implements Contract {
     };
 
     async getJettonData(provider: ContractProvider): Promise<jettonData> {
-
         const { stack } = await provider.get('get_jetton_data', []);
-
         return {
             totalSupply: stack.readBigNumber(),
             flag: stack.readNumber(),
@@ -286,7 +284,6 @@ export class JettonMinter implements Contract {
             buildContentCell: stack.readCell(),
             jettonWalletCode: stack.readCell()
         };
-
     };
 
     async getJettonManager(provider: ContractProvider): Promise<Address> {

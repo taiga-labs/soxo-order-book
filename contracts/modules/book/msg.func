@@ -47,8 +47,7 @@
     if order_id == ASK_ID {
         jw_address = index::calculate_jetton_wallet_address(ctx_si);
     } elseif order_id == BID_ID {
-        ;; usdt::calculate_jetton_wallet_address for mainnet
-        jw_address = index::calculate_jetton_wallet_address(ctx_si);
+        jw_address = usdt::calculate_jetton_wallet_address(ctx_si);
     } else {
         throw(error::invalid_order_type);
     }   
