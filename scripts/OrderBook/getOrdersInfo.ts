@@ -102,7 +102,7 @@ export async function run(provider: NetworkProvider) {
     //             console.log(`\t\tBID ${jter + 1}:`)
     //             console.log("\t\t\t[ BID ID ]: ", bidsCtxKeys[jter])
     //             console.log("\t\t\t[ user address ]: ", getAddress(bidsCtxValues[jter].stdAddr).toString())
-    //             console.log("\t\t\t[ user ASK volume ]: ", Number(bidsCtxValues[jter].orderAmount) / 10 ** 9, "SOXO\n")
+    //             console.log("\t\t\t[ user ASK volume ]: ", Number(bidsCtxValues[jter].orderAmount) / 10 ** 9, "INDEX\n")
     //         }
     //     }
     // }

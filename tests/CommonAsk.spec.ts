@@ -27,9 +27,9 @@ describe('BookMinter', () => {
     let bookMinterCode: Cell;
     let orderBookCode: Cell
     let jettonFactoryCode: Cell
-    let soxoWalletCode: Cell
+    let indexWalletCode: Cell
     let usdtWalletCode: Cell
-    let soxoMinterCode: Cell
+    let indexMinterCode: Cell
     let usdtMinterCode: Cell
 
     let JFMnem: string[]
@@ -49,9 +49,9 @@ describe('BookMinter', () => {
         bookMinterCode = await compile('BookMinter');
         orderBookCode = await compile('OrderBook');
         jettonFactoryCode = await compile('JettonFactory');
-        soxoWalletCode = await compile('JettonWallet');
+        indexWalletCode = await compile('JettonWallet');
         usdtWalletCode = await compile('JettonWallet'); // Cell.fromHex(USDT_WALLET_CODE)
-        soxoMinterCode = await compile('JettonMinter');
+        indexMinterCode = await compile('JettonMinter');
         usdtMinterCode = await compile('JettonMinter'); // Cell.fromHex(USDT_MINTER_CODE)
     }, TIMEOUT);
 
@@ -65,10 +65,10 @@ describe('BookMinter', () => {
     let SCorderBook: SandboxContract<OrderBook>;
 
     let SCjettonFactory: SandboxContract<JettonFactory>;
-    let SCsoxoMinter: SandboxContract<JettonMinter>;
+    let SCindexMinter: SandboxContract<JettonMinter>;
     let SCusdtMinter: SandboxContract<JettonMinter>;
 
-    // let SCsoxoAliceWallet: SandboxContract<JettonWallet>;
+    // let SCindexAliceWallet: SandboxContract<JettonWallet>;
     let SCusdtBobWallet: SandboxContract<JettonWallet>;
 ;
     let SCusdtOrderBookWallet: SandboxContract<JettonWallet>;
@@ -84,25 +84,25 @@ describe('BookMinter', () => {
             AdminPublicKey: JFKeyPair.publicKey,
             Seqno: 0n,
             AdminAddress: ACTAdmin.address,
-            MinterCode: soxoMinterCode,
+            MinterCode: indexMinterCode,
         }, jettonFactoryCode))
         
-        // SOXO JETTON MINTER ----------------------------------------------------------------------------------------------
-        SCsoxoMinter = blockchain.openContract(JettonMinter.createFromConfig({
+        // INDEX JETTON MINTER ----------------------------------------------------------------------------------------------
+        SCindexMinter = blockchain.openContract(JettonMinter.createFromConfig({
             totalSupply: 0n,                                            
             managerAddress: ACTAdmin.address,
             MinterContnet: buildjettonMinterContentCell({                              
                 image: "https://i.ibb.co/gr4gGrs/image.png",
                 decimals: "9",
-                name: "TEST SOXO Channel",
-                symbol: "TTSOXO",
-                description: "Test SOXO Channel Jetton description"
+                name: "TEST INDEX Channel",
+                symbol: "TTINDEX",
+                description: "Test INDEX Channel Jetton description"
             }),
             adminAddress: ACTAdmin.address,          
             transferAdminAddress: ACTAdmin.address,
             jettonWalletCode: await compile('JettonWallet'),
             FactoryAddress: SCjettonFactory.address
-        }, soxoMinterCode))
+        }, indexMinterCode))
         
         // USDT JETTON MINTER ----------------------------------------------------------------------------------------------
         SCusdtMinter = blockchain.openContract(JettonMinter.createFromConfig({
@@ -128,7 +128,7 @@ describe('BookMinter', () => {
             orderBooksAdminAddress: ACTAdmin.address,
             orderBookCode: orderBookCode,
             usdtWalletCode: usdtWalletCode,
-            soxoChannelWalletCode: soxoWalletCode,
+            indexChannelWalletCode: indexWalletCode,
         }, bookMinterCode));
 
         // ORDER BOOK AND HIS OWNER ----------------------------------------------------------------------------------------------
@@ -139,7 +139,7 @@ describe('BookMinter', () => {
             admin_address: ACTAdmin.address,
             book_minter_address: SCbookMinter.address,
             usdt_wallet_code: usdtWalletCode,
-            soxo_wallet_code: soxoWalletCode,
+            index_wallet_code: indexWalletCode,
         }, orderBookCode));
 
         // BOB AND HIS USDT WALLET ----------------------------------------------------------------------------------------------
@@ -180,7 +180,7 @@ describe('BookMinter', () => {
         const deployResult = await SCbookMinter.sendDeployOrderBook(ACTAdmin.getSender(), {
             value: toNano("0.05"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
-            soxoJettonMasterAddress: SCsoxoMinter.address,
+            indexJettonMasterAddress: SCindexMinter.address,
             adminPbk: OBAkeyPair.publicKey,
         });
 
@@ -256,7 +256,7 @@ describe('BookMinter', () => {
             success: true,
         });
 
-        // От SOXO JETTON WALLET Боба USDT JETTON WALLET СК OrderBook
+        // От INDEX JETTON WALLET Боба USDT JETTON WALLET СК OrderBook
         expect(makeAskResult.transactions).toHaveTransaction({
             from: SCusdtBobWallet.address,
             to: SCusdtOrderBookWallet.address,
@@ -280,7 +280,7 @@ describe('BookMinter', () => {
 
         let counters: [number, number] = await SCorderBook.getCounters()
 
-        // Умножем BOBS_SOXO_AMOUNT_FOR_BID на 10**3, так как USDT в контракте хранятся с decimals 9 для унификации. Только перед отправкой сумма делится на 1000
+        // Умножем BOBS_INDEX_AMOUNT_FOR_BID на 10**3, так как USDT в контракте хранятся с decimals 9 для унификации. Только перед отправкой сумма делится на 1000
         expect(orders.asks.get(BigInt(counters[0]))?.amount.toString()).toEqual((BOBS_USDT_AMOUNT_FOR_BID * 10n**3n).toString())
 
     }, TIMEOUT);

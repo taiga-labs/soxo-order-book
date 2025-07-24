@@ -27,9 +27,9 @@ describe('BookMinter', () => {
     let bookMinterCode: Cell;
     let orderBookCode: Cell
     let jettonFactoryCode: Cell
-    let soxoWalletCode: Cell
+    let indexWalletCode: Cell
     let usdtWalletCode: Cell
-    let soxoMinterCode: Cell
+    let indexMinterCode: Cell
     let usdtMinterCode: Cell
 
     let JFMnem: string[]
@@ -53,9 +53,9 @@ describe('BookMinter', () => {
         bookMinterCode = await compile('BookMinter');
         orderBookCode = await compile('OrderBook');
         jettonFactoryCode = await compile('JettonFactory');
-        soxoWalletCode = await compile('JettonWallet');
+        indexWalletCode = await compile('JettonWallet');
         usdtWalletCode = await compile('JettonWallet'); // Cell.fromHex(USDT_WALLET_CODE)
-        soxoMinterCode = await compile('JettonMinter');
+        indexMinterCode = await compile('JettonMinter');
         usdtMinterCode = await compile('JettonMinter'); // Cell.fromHex(USDT_MINTER_CODE)
     }, TIMEOUT);
 
@@ -69,16 +69,16 @@ describe('BookMinter', () => {
     let SCorderBook: SandboxContract<OrderBook>;
 
     let SCjettonFactory: SandboxContract<JettonFactory>;
-    let SCsoxoMinter: SandboxContract<JettonMinter>;
+    let SCindexMinter: SandboxContract<JettonMinter>;
     let SCusdtMinter: SandboxContract<JettonMinter>;
 
-    let SCsoxoAliceWallet: SandboxContract<JettonWallet>;
+    let SCindexAliceWallet: SandboxContract<JettonWallet>;
     let SCusdtBobWallet: SandboxContract<JettonWallet>;
 
-    let SCsoxoBobWallet: SandboxContract<JettonWallet>;
+    let SCindexBobWallet: SandboxContract<JettonWallet>;
     let SCusdtAliceWallet: SandboxContract<JettonWallet>;
 
-    let SCsoxoOrderBookWallet: SandboxContract<JettonWallet>;
+    let SCindexOrderBookWallet: SandboxContract<JettonWallet>;
     let SCusdtOrderBookWallet: SandboxContract<JettonWallet>;
 
     beforeEach(async () => {
@@ -92,25 +92,25 @@ describe('BookMinter', () => {
             AdminPublicKey: JFKeyPair.publicKey,
             Seqno: 0n,
             AdminAddress: ACTAdmin.address,
-            MinterCode: soxoMinterCode,
+            MinterCode: indexMinterCode,
         }, jettonFactoryCode))
         
-        // SOXO JETTON MINTER ----------------------------------------------------------------------------------------------
-        SCsoxoMinter = blockchain.openContract(JettonMinter.createFromConfig({
+        // INDEX JETTON MINTER ----------------------------------------------------------------------------------------------
+        SCindexMinter = blockchain.openContract(JettonMinter.createFromConfig({
             totalSupply: 0n,                                            
             managerAddress: ACTAdmin.address,
             MinterContnet: buildjettonMinterContentCell({                              
                 image: "https://i.ibb.co/gr4gGrs/image.png",
                 decimals: "9",
-                name: "TEST SOXO Channel",
-                symbol: "TTSOXO",
-                description: "Test SOXO Channel Jetton description"
+                name: "TEST INDEX Channel",
+                symbol: "TTINDEX",
+                description: "Test INDEX Channel Jetton description"
             }),
             adminAddress: ACTAdmin.address,          
             transferAdminAddress: ACTAdmin.address,
             jettonWalletCode: await compile('JettonWallet'),
             FactoryAddress: SCjettonFactory.address
-        }, soxoMinterCode))
+        }, indexMinterCode))
         
         // USDT JETTON MINTER ----------------------------------------------------------------------------------------------
         SCusdtMinter = blockchain.openContract(JettonMinter.createFromConfig({
@@ -136,7 +136,7 @@ describe('BookMinter', () => {
             orderBooksAdminAddress: ACTAdmin.address,
             orderBookCode: orderBookCode,
             usdtWalletCode: usdtWalletCode,
-            soxoChannelWalletCode: soxoWalletCode,
+            indexChannelWalletCode: indexWalletCode,
         }, bookMinterCode));
 
         // ORDER BOOK AND HIS OWNER ----------------------------------------------------------------------------------------------
@@ -146,18 +146,18 @@ describe('BookMinter', () => {
             admin_address: ACTAdmin.address,
             book_minter_address: SCbookMinter.address,
             usdt_wallet_code: usdtWalletCode,
-            soxo_wallet_code: soxoWalletCode,
+            index_wallet_code: indexWalletCode,
         }, orderBookCode));
 
-        // ALICE AND HER SOXO and USDT WALLET ----------------------------------------------------------------------------------------------
+        // ALICE AND HER INDEX and USDT WALLET ----------------------------------------------------------------------------------------------
         ACTALice = await blockchain.treasury('ALice')
-        SCsoxoAliceWallet = blockchain.openContract(JettonWallet.createFromConfig({
+        SCindexAliceWallet = blockchain.openContract(JettonWallet.createFromConfig({
             status: 0,
             balance: 0,
             owner: ACTALice.address,
-            minter: SCsoxoMinter.address,
-            walletCode: soxoWalletCode
-        }, soxoWalletCode));
+            minter: SCindexMinter.address,
+            walletCode: indexWalletCode
+        }, indexWalletCode));
 
         SCusdtAliceWallet = blockchain.openContract(JettonWallet.createFromConfig({
             status: 0,
@@ -168,7 +168,7 @@ describe('BookMinter', () => {
         }, usdtWalletCode));
 
 
-        // BOB AND HIS USDT and SOXO WALLET ----------------------------------------------------------------------------------------------
+        // BOB AND HIS USDT and INDEX WALLET ----------------------------------------------------------------------------------------------
         ACTBob = await blockchain.treasury('Bob')
         SCusdtBobWallet = blockchain.openContract(JettonWallet.createFromConfig({
             status: 0,
@@ -178,23 +178,23 @@ describe('BookMinter', () => {
             walletCode: usdtWalletCode
         }, usdtWalletCode));
 
-        SCsoxoBobWallet = blockchain.openContract(JettonWallet.createFromConfig({
+        SCindexBobWallet = blockchain.openContract(JettonWallet.createFromConfig({
             status: 0,
             balance: 0,
             owner: ACTBob.address,
-            minter: SCsoxoMinter.address,
-            walletCode: soxoWalletCode
-        }, soxoWalletCode));
+            minter: SCindexMinter.address,
+            walletCode: indexWalletCode
+        }, indexWalletCode));
 
-        // ORDER BOOK SOXO AND USDT WALLETS ----------------------------------------------------------------------------------------------
+        // ORDER BOOK INDEX AND USDT WALLETS ----------------------------------------------------------------------------------------------
 
-        SCsoxoOrderBookWallet = blockchain.openContract(JettonWallet.createFromConfig({
+        SCindexOrderBookWallet = blockchain.openContract(JettonWallet.createFromConfig({
             status: 0,
             balance: 0,
             owner: SCorderBook.address,
-            minter: SCsoxoMinter.address,
-            walletCode: soxoWalletCode
-        }, soxoWalletCode));
+            minter: SCindexMinter.address,
+            walletCode: indexWalletCode
+        }, indexWalletCode));
 
         SCusdtOrderBookWallet = blockchain.openContract(JettonWallet.createFromConfig({
             status: 0,
@@ -221,7 +221,7 @@ describe('BookMinter', () => {
         const deployResult = await SCbookMinter.sendDeployOrderBook(ACTAdmin.getSender(), {
             value: toNano("0.05"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
-            soxoJettonMasterAddress: SCsoxoMinter.address,
+            indexJettonMasterAddress: SCindexMinter.address,
             adminPbk: OBAkeyPair.publicKey,
         });
 
@@ -271,17 +271,17 @@ describe('BookMinter', () => {
         const usdtJettonData: jettonData = await SCusdtMinter.getJettonData();
         expect(usdtJettonData.totalSupply).toEqual(AmountToMint)
 
-        // MINT 100_000 SOXO TO ALICE ----------------------------------------------------------------------------------------------
-        await SCsoxoMinter.sendMint(ACTAdmin.getSender(), {
+        // MINT 100_000 INDEX TO ALICE ----------------------------------------------------------------------------------------------
+        await SCindexMinter.sendMint(ACTAdmin.getSender(), {
             value: toNano('0.08'),
             queryId: BigInt(Math.floor(Date.now() / 1000)),
             toAddress: ACTALice.address,
             tonAmount: toNano('0.05'),
             jettonAmountToMint: AmountToMint,
-            fromAddress: SCsoxoMinter.address
+            fromAddress: SCindexMinter.address
         })
-        const soxoJettonData: jettonData = await SCsoxoMinter.getJettonData();
-        expect(soxoJettonData.totalSupply).toEqual(AmountToMint)
+        const indexJettonData: jettonData = await SCindexMinter.getJettonData();
+        expect(indexJettonData.totalSupply).toEqual(AmountToMint)
 
         // BOB MAKES ASK! 20 USDT ----------------------------------------------------------------------------------------------
         const BOBS_PRIORITY: number = 1;
@@ -311,7 +311,7 @@ describe('BookMinter', () => {
             success: true,
         });
 
-        // От SOXO JETTON WALLET Боба USDT JETTON WALLET СК OrderBook
+        // От INDEX JETTON WALLET Боба USDT JETTON WALLET СК OrderBook
         expect(makeAskResult.transactions).toHaveTransaction({
             from: SCusdtBobWallet.address,
             to: SCusdtOrderBookWallet.address,
@@ -340,14 +340,14 @@ describe('BookMinter', () => {
         expect(orders1.asks.get(BigInt(counters0[0]))?.amount.toString()).toEqual((BOBS_USDT_AMOUNT_FOR_ASK * 10n**3n).toString())
 
 
-        // ALICE MAKES BID! 1 SOXO ----------------------------------------------------------------------------------------------
+        // ALICE MAKES BID! 1 INDEX ----------------------------------------------------------------------------------------------
         const ALICES_PRIORITY: number = 1;
-        const ALICES_SOXO_AMOUNT_FOR_BID: bigint = 1n * 10n**9n;
+        const ALICES_INDEX_AMOUNT_FOR_BID: bigint = 1n * 10n**9n;
 
-        const makeBidResult = await SCsoxoAliceWallet.sendTransfer(ACTALice.getSender(), {
+        const makeBidResult = await SCindexAliceWallet.sendTransfer(ACTALice.getSender(), {
             value: toNano("0.20"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
-            jettonAmount: ALICES_SOXO_AMOUNT_FOR_BID,
+            jettonAmount: ALICES_INDEX_AMOUNT_FOR_BID,
             recipientAddress: SCorderBook.address,
             forwardTONAmount: toNano("0.15"),
             forwardPayload: (
@@ -360,34 +360,34 @@ describe('BookMinter', () => {
             secretKey: OBAkeyPair.secretKey,
         })
 
-        // От Алисы её SOXO jetton wallet
+        // От Алисы её INDEX jetton wallet
         expect(makeBidResult.transactions).toHaveTransaction({
             from: ACTALice.address,
-            to: SCsoxoAliceWallet.address,
+            to: SCindexAliceWallet.address,
             op: 0xf8a7ea5, // op::transfer
             success: true,
         });
 
-        // От SOXO JETTON WALLET Алисы SOXO JETTON WALLET СК OrderBook
+        // От INDEX JETTON WALLET Алисы INDEX JETTON WALLET СК OrderBook
         expect(makeBidResult.transactions).toHaveTransaction({
-            from: SCsoxoAliceWallet.address,
-            to: SCsoxoOrderBookWallet.address,
+            from: SCindexAliceWallet.address,
+            to: SCindexOrderBookWallet.address,
             op: 0x178d4519, // op::internal_transfer 
             success: true,
         });
 
-        // От SOXO JETTON WALLET СК OrderBook СК OrderBook'у
+        // От INDEX JETTON WALLET СК OrderBook СК OrderBook'у
         expect(makeBidResult.transactions).toHaveTransaction({
-            from: SCsoxoOrderBookWallet.address,
+            from: SCindexOrderBookWallet.address,
             to: SCorderBook.address,
             op: 0x7362d09c, // op::transfer_notification
             success: true,
         });
 
-        console.log("SCsoxoOrderBookWallet:", SCsoxoOrderBookWallet.address.toString())
+        console.log("SCindexOrderBookWallet:", SCindexOrderBookWallet.address.toString())
         console.log("SCusdtOrderBookWallet:", SCusdtOrderBookWallet.address.toString())
 
-        console.log("SCsoxoBobWallet:", SCsoxoBobWallet.address.toString())
+        console.log("SCindexBobWallet:", SCindexBobWallet.address.toString())
         console.log("SCusdtAliceWallet:", SCusdtAliceWallet.address.toString())
 
         console.log("BOB's STD ADDRESS:", getStdAddress(ACTBob.address))
@@ -411,27 +411,27 @@ describe('BookMinter', () => {
             success: true,
         });
 
-        // От OrderBook SOXO JETTON WALLET СК OrderBook'а (перевод BOB'у 1 SOXO)
+        // От OrderBook INDEX JETTON WALLET СК OrderBook'а (перевод BOB'у 1 INDEX)
         expect(makeBidResult.transactions).toHaveTransaction({
             from: SCorderBook.address,
-            to: SCsoxoOrderBookWallet.address,
+            to: SCindexOrderBookWallet.address,
             op: 0xf8a7ea5, // op::transfer
             success: true,
         });
 
-        // SOXO JETTON WALLET СК OrderBook'а SOXO JETTON WALLET СК BOB'а (перевод BOB'у 1 SOXO)
+        // INDEX JETTON WALLET СК OrderBook'а INDEX JETTON WALLET СК BOB'а (перевод BOB'у 1 INDEX)
         expect(makeBidResult.transactions).toHaveTransaction({
-            from: SCsoxoOrderBookWallet.address,
-            to: SCsoxoBobWallet.address,
+            from: SCindexOrderBookWallet.address,
+            to: SCindexBobWallet.address,
             op: 0x178d4519, // op::internal_transfer 
             success: true,
         });
 
         // ПРОВЕРКА БАЛАНСОВ ALICE и BOB после исполнения ордера ----------------------------------------------------------------------------------------------
-        const bobsSoxoBalance = await SCsoxoBobWallet.getJettonBalance()
+        const bobsIndexBalance = await SCindexBobWallet.getJettonBalance()
         const alicesUsdtBalance = await SCusdtAliceWallet.getJettonBalance()
         
-        expect((bobsSoxoBalance).toString()).toEqual((1n*10n**9n).toString())
+        expect((bobsIndexBalance).toString()).toEqual((1n*10n**9n).toString())
         expect((alicesUsdtBalance).toString()).toEqual((10n*10n**6n).toString())
 
         // Check BOB's ASK Amount after order execution ----------------------------------------------------------------------------------------------
@@ -468,7 +468,7 @@ describe('BookMinter', () => {
         const deployResult = await SCbookMinter.sendDeployOrderBook(ACTAdmin.getSender(), {
             value: toNano("0.05"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
-            soxoJettonMasterAddress: SCsoxoMinter.address,
+            indexJettonMasterAddress: SCindexMinter.address,
             adminPbk: OBAkeyPair.publicKey,
         });
 
@@ -518,27 +518,27 @@ describe('BookMinter', () => {
         const usdtJettonData: jettonData = await SCusdtMinter.getJettonData();
         expect(usdtJettonData.totalSupply).toEqual(AmountToMint)
 
-        // MINT 100_000 SOXO TO ALICE ----------------------------------------------------------------------------------------------
-        await SCsoxoMinter.sendMint(ACTAdmin.getSender(), {
+        // MINT 100_000 INDEX TO ALICE ----------------------------------------------------------------------------------------------
+        await SCindexMinter.sendMint(ACTAdmin.getSender(), {
             value: toNano('0.08'),
             queryId: BigInt(Math.floor(Date.now() / 1000)),
             toAddress: ACTALice.address,
             tonAmount: toNano('0.05'),
             jettonAmountToMint: AmountToMint,
-            fromAddress: SCsoxoMinter.address
+            fromAddress: SCindexMinter.address
         })
-        const soxoJettonData: jettonData = await SCsoxoMinter.getJettonData();
-        expect(soxoJettonData.totalSupply).toEqual(AmountToMint)
+        const indexJettonData: jettonData = await SCindexMinter.getJettonData();
+        expect(indexJettonData.totalSupply).toEqual(AmountToMint)
 
 
-        // ALICE MAKES BID! 1 SOXO ----------------------------------------------------------------------------------------------
+        // ALICE MAKES BID! 1 INDEX ----------------------------------------------------------------------------------------------
         const ALICES_PRIORITY: number = 1;
-        const ALICES_SOXO_AMOUNT_FOR_BID: bigint = 1n * 10n**9n;
+        const ALICES_INDEX_AMOUNT_FOR_BID: bigint = 1n * 10n**9n;
 
-        const makeBidResult = await SCsoxoAliceWallet.sendTransfer(ACTALice.getSender(), {
+        const makeBidResult = await SCindexAliceWallet.sendTransfer(ACTALice.getSender(), {
             value: toNano("0.20"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
-            jettonAmount: ALICES_SOXO_AMOUNT_FOR_BID,
+            jettonAmount: ALICES_INDEX_AMOUNT_FOR_BID,
             recipientAddress: SCorderBook.address,
             forwardTONAmount: toNano("0.15"),
             forwardPayload: (
@@ -551,25 +551,25 @@ describe('BookMinter', () => {
             secretKey: OBAkeyPair.secretKey,
         })
 
-        // От Алисы её SOXO jetton wallet
+        // От Алисы её INDEX jetton wallet
         expect(makeBidResult.transactions).toHaveTransaction({
             from: ACTALice.address,
-            to: SCsoxoAliceWallet.address,
+            to: SCindexAliceWallet.address,
             op: 0xf8a7ea5, // op::transfer
             success: true,
         });
 
-        // От SOXO JETTON WALLET Алисы SOXO JETTON WALLET СК OrderBook
+        // От INDEX JETTON WALLET Алисы INDEX JETTON WALLET СК OrderBook
         expect(makeBidResult.transactions).toHaveTransaction({
-            from: SCsoxoAliceWallet.address,
-            to: SCsoxoOrderBookWallet.address,
+            from: SCindexAliceWallet.address,
+            to: SCindexOrderBookWallet.address,
             op: 0x178d4519, // op::internal_transfer 
             success: true,
         });
 
-        // От SOXO JETTON WALLET СК OrderBook СК OrderBook'у
+        // От INDEX JETTON WALLET СК OrderBook СК OrderBook'у
         expect(makeBidResult.transactions).toHaveTransaction({
-            from: SCsoxoOrderBookWallet.address,
+            from: SCindexOrderBookWallet.address,
             to: SCorderBook.address,
             op: 0x7362d09c, // op::transfer_notification
             success: true,
@@ -584,7 +584,7 @@ describe('BookMinter', () => {
         let counter1: [number, number] = await SCorderBook.getCounters()
       
         console.log("ALICES's BID amount:", orders1.bids.get(getStdAddress(ACTALice.address))?.amount.toString())
-        expect(orders1.bids.get(BigInt(counter1[1]))?.amount.toString()).toEqual((ALICES_SOXO_AMOUNT_FOR_BID).toString())
+        expect(orders1.bids.get(BigInt(counter1[1]))?.amount.toString()).toEqual((ALICES_INDEX_AMOUNT_FOR_BID).toString())
 
 
         // BOB MAKES ASK! 20 USDT ----------------------------------------------------------------------------------------------
@@ -615,7 +615,7 @@ describe('BookMinter', () => {
             success: true,
         });
 
-        // От SOXO JETTON WALLET Боба USDT JETTON WALLET СК OrderBook
+        // От INDEX JETTON WALLET Боба USDT JETTON WALLET СК OrderBook
         expect(makeAskResult.transactions).toHaveTransaction({
             from: SCusdtBobWallet.address,
             to: SCusdtOrderBookWallet.address,
@@ -631,10 +631,10 @@ describe('BookMinter', () => {
             success: true,
         });
 
-        console.log("SCsoxoOrderBookWallet:", SCsoxoOrderBookWallet.address.toString())
+        console.log("SCindexOrderBookWallet:", SCindexOrderBookWallet.address.toString())
         console.log("SCusdtOrderBookWallet:", SCusdtOrderBookWallet.address.toString())
 
-        console.log("SCsoxoBobWallet:", SCsoxoBobWallet.address.toString())
+        console.log("SCindexBobWallet:", SCindexBobWallet.address.toString())
         console.log("SCusdtAliceWallet:", SCusdtAliceWallet.address.toString())
         
         // ПРОВЕРКА ИСПОЛНЕНИЯ ОРДЕРА(подробнее в AskBid.md) ----------------------------------------------------------------------------------------------
@@ -655,27 +655,27 @@ describe('BookMinter', () => {
             success: true,
         });
 
-        // От OrderBook SOXO JETTON WALLET СК OrderBook'а (перевод BOB'у 1 SOXO)
+        // От OrderBook INDEX JETTON WALLET СК OrderBook'а (перевод BOB'у 1 INDEX)
         expect(makeAskResult.transactions).toHaveTransaction({
             from: SCorderBook.address,
-            to: SCsoxoOrderBookWallet.address,
+            to: SCindexOrderBookWallet.address,
             op: 0xf8a7ea5, // op::transfer
             success: true,
         });
 
-        // SOXO JETTON WALLET СК OrderBook'а SOXO JETTON WALLET СК BOB'а (перевод BOB'у 1 SOXO)
+        // INDEX JETTON WALLET СК OrderBook'а INDEX JETTON WALLET СК BOB'а (перевод BOB'у 1 INDEX)
         expect(makeAskResult.transactions).toHaveTransaction({
-            from: SCsoxoOrderBookWallet.address,
-            to: SCsoxoBobWallet.address,
+            from: SCindexOrderBookWallet.address,
+            to: SCindexBobWallet.address,
             op: 0x178d4519, // op::internal_transfer 
             success: true,
         });
 
         // ПРОВЕРКА БАЛАНСОВ ALICE и BOB после исполнения ордера ----------------------------------------------------------------------------------------------
-        const bobsSoxoBalance = await SCsoxoBobWallet.getJettonBalance()
+        const bobsIndexBalance = await SCindexBobWallet.getJettonBalance()
         const alicesUsdtBalance = await SCusdtAliceWallet.getJettonBalance()
         
-        expect((bobsSoxoBalance).toString()).toEqual((1n*10n**9n).toString())
+        expect((bobsIndexBalance).toString()).toEqual((1n*10n**9n).toString())
         expect((alicesUsdtBalance).toString()).toEqual((10n*10n**6n).toString())
 
         // Check BOB's ASK Amount after order execution ----------------------------------------------------------------------------------------------

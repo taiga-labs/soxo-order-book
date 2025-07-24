@@ -3,7 +3,7 @@
 
     return (
         glob::usdt_balance,
-        glob::soxo_jetton_balance,
+        glob::index_jetton_balance,
         glob::trading_session_price
     );
 
@@ -17,7 +17,7 @@
         init::book_minter_address,
 
         glob::usdt_master_address,
-        glob::soxo_master_address
+        glob::index_master_address
     );
 }
 

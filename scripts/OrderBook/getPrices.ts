@@ -13,6 +13,6 @@ export async function run(provider: NetworkProvider) {
     const prices: [ bigint, bigint, bigint ] = await orderBook.getPrices()
     
     console.log("[ usdt_balance ]:", prices[0])
-    console.log("[ soxo_jetton_balance ]:", prices[1])
+    console.log("[ index_jetton_balance ]:", prices[1])
     console.log("[ trading_session_price ]:", prices[2] / TSP_DIVIDER)
 }

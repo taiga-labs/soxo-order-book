@@ -1,4 +1,4 @@
-cell soxo::pack_jetton_wallet_data(int status, int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
+cell index::pack_jetton_wallet_data(int status, int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
     return  (
         begin_cell()
             .store_uint(status, 4)
@@ -9,7 +9,7 @@ cell soxo::pack_jetton_wallet_data(int status, int balance, slice owner_address,
         .end_cell());
 }
 
-cell soxo::calculate_jetton_wallet_state_init(slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
+cell index::calculate_jetton_wallet_state_init(slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
     {-
         _ split_depth:(Maybe (## 5)) special:(Maybe TickTock)
         code:(Maybe ^Cell) data:(Maybe ^Cell)
@@ -20,7 +20,7 @@ cell soxo::calculate_jetton_wallet_state_init(slice owner_address, slice jetton_
             .store_uint(0, 1 + 1)            ;; No split depth; No TickTock
             .store_dict(jetton_wallet_code)  ;; Code
             .store_dict(                     ;; Data
-                    soxo::pack_jetton_wallet_data(0, 0,  ;; Initial state: status 0, balance 0
+                    index::pack_jetton_wallet_data(0, 0,  ;; Initial state: status 0, balance 0
                         owner_address,
                         jetton_master_address,
                         jetton_wallet_code)
@@ -29,7 +29,7 @@ cell soxo::calculate_jetton_wallet_state_init(slice owner_address, slice jetton_
         .end_cell());
 }
 
-slice soxo::calculate_jetton_wallet_address(cell state_init) inline {
+slice index::calculate_jetton_wallet_address(cell state_init) inline {
     {-
         addr_std$10 anycast:(Maybe Anycast) workchain_id:int8 address:bits256
         = MsgAddressInt;
@@ -43,7 +43,7 @@ slice soxo::calculate_jetton_wallet_address(cell state_init) inline {
     );
 }
 
-slice soxo::calculate_user_jetton_wallet_address(slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
-    return soxo::calculate_jetton_wallet_address(soxo::calculate_jetton_wallet_state_init(owner_address, jetton_master_address, jetton_wallet_code));
+slice index::calculate_user_jetton_wallet_address(slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
+    return index::calculate_jetton_wallet_address(index::calculate_jetton_wallet_state_init(owner_address, jetton_master_address, jetton_wallet_code));
 }
 

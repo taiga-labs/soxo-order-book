@@ -28,10 +28,10 @@ slice construct_slice_addr( int std_addr ) inline {
     );
 }
 
-int get_usdt( int soxo_amount ) inline {
-    return ((soxo_amount * glob::trading_session_price) / TSP_DIVIDER);
+int get_usdt( int index_amount ) inline {
+    return ((index_amount * glob::trading_session_price) / TSP_DIVIDER);
 }
 
-int get_soxo( int usdt_amount ) inline {
+int get_index( int usdt_amount ) inline {
     return ((usdt_amount * TSP_DIVIDER) / glob::trading_session_price);
 }

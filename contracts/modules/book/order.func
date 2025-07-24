@@ -26,7 +26,7 @@
 
             if order_type == BID_ID {
                 ;; usdt::calculate_jetton_wallet_state_init for mainnet
-                cell usdt_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
+                cell usdt_si = index::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
                 ctx_si = usdt_si;
 
                 order_amount = order_amount / USDT_MULTIPLIER; 
@@ -39,13 +39,13 @@
                 order_id = BID_ID;
 
             } elseif order_type == ASK_ID {
-                cell soxo_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::soxo_master_address, init::soxo_wallet_code);
-                ctx_si = soxo_si;
+                cell index_si = index::calculate_jetton_wallet_state_init(my_address(), glob::index_master_address, init::index_wallet_code);
+                ctx_si = index_si;
 
-                glob::soxo_jetton_balance -= order_amount;
+                glob::index_jetton_balance -= order_amount;
 
                 ;; 5 · Integer out of expected range
-                throw_if(error::soxo_balance_overflow, glob::soxo_jetton_balance < 0);
+                throw_if(error::index_balance_overflow, glob::index_jetton_balance < 0);
 
                 order_id = ASK_ID;
             } else {

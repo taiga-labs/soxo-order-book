@@ -18,5 +18,5 @@ export async function run(provider: NetworkProvider) {
   
     // console.log("[ order_book_code ]:", bookMinterData[3].toString())
     // console.log("[ usdt_wallet_code ]:", bookMinterData[4].toString())
-    // console.log("[ soxo_channel_wallet_code ]:", bookMinterData[5].toString())
+    // console.log("[ index_channel_wallet_code ]:", bookMinterData[5].toString())
 }

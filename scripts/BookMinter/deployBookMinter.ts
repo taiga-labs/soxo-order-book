@@ -15,7 +15,7 @@ export async function run(provider: NetworkProvider) {
         orderBookCode:  await compile("OrderBook"),
 
         usdtWalletCode: await compile("JettonWallet"),
-        soxoChannelWalletCode:  await compile("JettonWallet"),
+        indexChannelWalletCode:  await compile("JettonWallet"),
     }, await compile('BookMinter')));
 
     await bookMinter.sendDeploy(provider.sender(), toNano("0.05"));

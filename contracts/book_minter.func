@@ -10,7 +10,7 @@ global slice glob::order_books_admin_address;
 
 global cell glob::order_book_code;
 global cell glob::usdt_wallet_code;
-global cell glob::soxo_channel_wallet_code;
+global cell glob::index_channel_wallet_code;
 
 
 () load_globals( ) impure inline {
@@ -22,7 +22,7 @@ global cell glob::soxo_channel_wallet_code;
 
     glob::order_book_code =          smc_storage~load_ref();
     glob::usdt_wallet_code =         smc_storage~load_ref();
-    glob::soxo_channel_wallet_code = smc_storage~load_ref();
+    glob::index_channel_wallet_code = smc_storage~load_ref();
 }
 
 () set_globals( ) impure inline {
@@ -34,7 +34,7 @@ global cell glob::soxo_channel_wallet_code;
 
             .store_ref(glob::order_book_code)
             .store_ref(glob::usdt_wallet_code)
-            .store_ref(glob::soxo_channel_wallet_code)
+            .store_ref(glob::index_channel_wallet_code)
         .end_cell()
     );
 }
@@ -55,7 +55,7 @@ cell pack_order_book_init_storage( slice init::owner_address )  {
                         begin_cell()
                             .store_slice(my_address())
                             .store_ref(glob::usdt_wallet_code)
-                            .store_ref(glob::soxo_channel_wallet_code)
+                            .store_ref(glob::index_channel_wallet_code)
                         .end_cell()
                     )
                 .end_cell()  
@@ -123,7 +123,7 @@ slice calculate_order_book_address( cell state_init ) inline {
     ( int op_code, int query_id ) = in_msg_body~load_op_and_query_id();
 
     if (op_code == op::bm::deploy_order_book) { 
-        slice soxo_jetton_master_address = in_msg_body~load_msg_addr();
+        slice index_jetton_master_address = in_msg_body~load_msg_addr();
         int admin_pbk = in_msg_body~load_uint(256);
 
         deploy_new_order_book(
@@ -134,7 +134,7 @@ slice calculate_order_book_address( cell state_init ) inline {
                 .store_op(op::minter_book_init)
                 .store_query_id(FALSE)
                 .store_slice(glob::usdt_master_address)
-                .store_slice(soxo_jetton_master_address)
+                .store_slice(index_jetton_master_address)
                 .store_uint(admin_pbk, 256)
             .end_cell(), 
             my_balance, msg_value
@@ -170,7 +170,7 @@ slice calculate_order_book_address( cell state_init ) inline {
 
         glob::order_book_code,
         glob::usdt_wallet_code, 
-        glob::soxo_channel_wallet_code
+        glob::index_channel_wallet_code
     );
 }
 

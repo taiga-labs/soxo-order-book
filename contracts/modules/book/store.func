@@ -3,15 +3,15 @@ global slice init::admin_address;
 global slice init::book_minter_address;
 
 global cell init::usdt_wallet_code;
-global cell init::soxo_wallet_code;
+global cell init::index_wallet_code;
 
 global cell glob::porder_queues;
 
 global slice glob::usdt_master_address;
-global slice glob::soxo_master_address;
+global slice glob::index_master_address;
 
 global int glob::usdt_balance;
-global int glob::soxo_jetton_balance;
+global int glob::index_jetton_balance;
 global int glob::trading_session_price; ;; * 1000
 
 global int glob::asks_counter;
@@ -36,18 +36,18 @@ int load_globals( ) impure {
 
     init::book_minter_address = addrs2~load_msg_addr();
     init::usdt_wallet_code    = addrs2~load_ref();
-    init::soxo_wallet_code    = addrs2~load_ref();
+    init::index_wallet_code    = addrs2~load_ref();
 
     if (smc_storage.slice_bits() > 0) | (smc_storage.slice_refs() > 0) {
         glob::porder_queues =       smc_storage~load_dict();
 
         slice jw_addresses =        smc_storage~load_ref().begin_parse();
         glob::usdt_master_address = jw_addresses~load_msg_addr();
-        glob::soxo_master_address = jw_addresses~load_msg_addr();
+        glob::index_master_address = jw_addresses~load_msg_addr();
 
         slice conis_info =            jw_addresses~load_ref().begin_parse();
         glob::usdt_balance =          conis_info~load_coins();
-        glob::soxo_jetton_balance =   conis_info~load_coins();
+        glob::index_jetton_balance =   conis_info~load_coins();
         glob::trading_session_price = conis_info~load_coins();
         glob::asks_counter =          conis_info~load_uint(ASKS_BIDS_NUMBER_LEN);
         glob::bids_counter =          conis_info~load_uint(ASKS_BIDS_NUMBER_LEN);
@@ -61,10 +61,10 @@ int load_globals( ) impure {
         glob::porder_queues =         null();
 
         glob::usdt_master_address =   null();
-        glob::soxo_master_address =   null();
+        glob::index_master_address =   null();
 
         glob::usdt_balance =          null();
-        glob::soxo_jetton_balance =   null();
+        glob::index_jetton_balance =   null();
         glob::trading_session_price = null();
 
         glob::asks_counter =          null();
@@ -94,7 +94,7 @@ int load_globals( ) impure {
                         begin_cell()
                             .store_slice(init::book_minter_address)
                             .store_ref(init::usdt_wallet_code)
-                            .store_ref(init::soxo_wallet_code)
+                            .store_ref(init::index_wallet_code)
                         .end_cell()
                     )
                 .end_cell()
@@ -105,11 +105,11 @@ int load_globals( ) impure {
             .store_ref(
                 begin_cell()
                     .store_slice(glob::usdt_master_address)
-                    .store_slice(glob::soxo_master_address)
+                    .store_slice(glob::index_master_address)
                     .store_ref(
                         begin_cell()
                             .store_coins(glob::usdt_balance)
-                            .store_coins(glob::soxo_jetton_balance)
+                            .store_coins(glob::index_jetton_balance)
                             .store_coins(glob::trading_session_price)
                             .store_uint(glob::asks_counter, ASKS_BIDS_NUMBER_LEN)
                             .store_uint(glob::bids_counter, ASKS_BIDS_NUMBER_LEN)

@@ -8,7 +8,7 @@ export type BookMinterConfig = {
 
     orderBookCode: Cell;
     usdtWalletCode: Cell;
-    soxoChannelWalletCode: Cell;
+    indexChannelWalletCode: Cell;
 };  
 
 export function bookMinterConfigToCell(config: BookMinterConfig): Cell {
@@ -20,7 +20,7 @@ export function bookMinterConfigToCell(config: BookMinterConfig): Cell {
             
             .storeRef(config.orderBookCode)
             .storeRef(config.usdtWalletCode)
-            .storeRef(config.soxoChannelWalletCode)
+            .storeRef(config.indexChannelWalletCode)
         .endCell()
     );
 }
@@ -50,7 +50,7 @@ export class BookMinter implements Contract {
         opts: {
             value: bigint;
             qi: bigint;
-            soxoJettonMasterAddress: Address;
+            indexJettonMasterAddress: Address;
             adminPbk: Buffer,
         }
     ) {
@@ -61,7 +61,7 @@ export class BookMinter implements Contract {
                 beginCell()
                     .storeUint(0xf4874876, 32)
                     .storeUint(opts.qi, 64)
-                    .storeAddress(opts.soxoJettonMasterAddress)
+                    .storeAddress(opts.indexJettonMasterAddress)
                     .storeBuffer(opts.adminPbk)
                 .endCell()
         });

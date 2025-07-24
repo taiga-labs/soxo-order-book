@@ -14,5 +14,5 @@ export async function run(provider: NetworkProvider) {
     console.log("[ book_minter_address ]:", addresses[2])
 
     console.log("[ usdt_master_address ]:", addresses[3])
-    console.log("[ soxo_master_address ]:", addresses[4])
+    console.log("[ index_master_address ]:", addresses[4])
 }

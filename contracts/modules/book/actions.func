@@ -3,11 +3,11 @@
     glob::porder_queues = new_dict(); 
     init_order_queues();
 
-    glob::usdt_master_address   = in_msg_body~load_msg_addr();
-    glob::soxo_master_address   = in_msg_body~load_msg_addr();
-    glob::usdt_balance          = 0;
-    glob::soxo_jetton_balance   = 0;
-    glob::trading_session_price = 0;
+    glob::usdt_master_address    = in_msg_body~load_msg_addr();
+    glob::index_master_address   = in_msg_body~load_msg_addr();
+    glob::usdt_balance           = 0;
+    glob::index_jetton_balance   = 0;
+    glob::trading_session_price  = 0;
 
     glob::asks_counter =          0;
     glob::bids_counter =          0;
@@ -33,7 +33,7 @@
 
     if inner_op == op::ob::make_ask {
         ;; usdt::calculate_jetton_wallet_address
-        slice ctx_usdt_jw = soxo::calculate_user_jetton_wallet_address(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
+        slice ctx_usdt_jw = index::calculate_user_jetton_wallet_address(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
 
         throw_unless(error::not_usdt_jetton, equal_slices_bits(sender_address, ctx_usdt_jw));
         add_ask(priority, from_address, msg_jetton_amount, query_id);
@@ -42,8 +42,8 @@
     }
 
     if inner_op == op::ob::make_bid {
-        slice ctx_soxo_jw = soxo::calculate_user_jetton_wallet_address(my_address(), glob::soxo_master_address, init::soxo_wallet_code);
-        throw_unless(error::not_soxo_jetton, equal_slices_bits(sender_address, ctx_soxo_jw));
+        slice ctx_index_jw = index::calculate_user_jetton_wallet_address(my_address(), glob::index_master_address, init::index_wallet_code);
+        throw_unless(error::not_index_jetton, equal_slices_bits(sender_address, ctx_index_jw));
         add_bid(priority, from_address, msg_jetton_amount, query_id);
         set_globals();
         return ();
@@ -70,7 +70,7 @@
 
     cell ctx_si = null();
     if askbid? == BID_ID {
-        ctx_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::soxo_master_address, init::soxo_wallet_code);
+        ctx_si = index::calculate_jetton_wallet_state_init(my_address(), glob::index_master_address, init::index_wallet_code);
 
         int success = TRUE;
         int pivot_id = -1;
@@ -93,7 +93,7 @@
             }
         } until (~ success);
 
-        glob::soxo_jetton_balance -= jetton_amount;
+        glob::index_jetton_balance -= jetton_amount;
         throw_unless(error::not_exists_while_cancel, exists?);
        
         send_jetton_order(ctx_si, user_address, jetton_amount, query_id, ASK_ID, SEND_MODE_PAY_FEES_SEPARATELY);
@@ -101,7 +101,7 @@
 
     } elseif askbid? == ASK_ID {
         ;; usdt::calculate_jetton_wallet_state_init for mainnet
-        ctx_si = soxo::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
+        ctx_si = index::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
 
         int success = TRUE;
         int pivot_id = -1;
@@ -152,7 +152,7 @@ int action::admin_actions(slice in_msg_body, int op_code, slice sender_address) 
     if op_code == op::ob::fix_balances {
         throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
         glob::usdt_balance = in_msg_body~load_coins();
-        glob::soxo_jetton_balance = in_msg_body~load_coins();
+        glob::index_jetton_balance = in_msg_body~load_coins();
         set_globals();
         return 0;
     }

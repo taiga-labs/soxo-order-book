@@ -30,15 +30,15 @@ export async function run(provider: NetworkProvider) {
 
     const jettonFactory = provider.open(JettonFactory.createFromAddress(Address.parse(JETTON_FACTORY_ADDRESS)));
 
-    const SOXO_CONFIG: MinterConfig = {
+    const INDEX_CONFIG: MinterConfig = {
         totalSupply: 0n,                                            
         managerAddress: Address.parse(ADMIN_ADDRESS),
         MinterContnet: buildjettonMinterContentCell({                              
             image: "https://i.ibb.co/gr4gGrs/image.png",
             decimals: "9",
-            name: "TEST SOXO Channel",
-            symbol: "TTSOXO",
-            description: "Test SOXO Channel Jetton description"
+            name: "TEST INDEX Channel",
+            symbol: "TTINDEX",
+            description: "Test INDEX Channel Jetton description"
         }),
         adminAddress: Address.parse(ADMIN_ADDRESS),          
         transferAdminAddress: Address.parse(ADMIN_ADDRESS),
@@ -46,7 +46,7 @@ export async function run(provider: NetworkProvider) {
         FactoryAddress: jettonFactory.address
     }
 
-    const minterConfigCell: Cell = minterConfigToCell(SOXO_CONFIG)
+    const minterConfigCell: Cell = minterConfigToCell(INDEX_CONFIG)
 
     await jettonFactory.sendDeployNewMinter(provider.sender(), {
         value: toNano('0.7'),

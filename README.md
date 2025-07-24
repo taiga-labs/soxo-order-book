@@ -1,4 +1,4 @@
-# soxo-order-book
+# index-order-book
 
 ## Project structure
 

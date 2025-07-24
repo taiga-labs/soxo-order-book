@@ -1,5 +1,5 @@
 {
-    "name": "soxo-order-book",
+    "name": "index-order-book",
     "version": "0.0.1",
     "scripts": {
         "bp": "blueprint",
