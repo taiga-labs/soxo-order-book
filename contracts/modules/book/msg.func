@@ -16,15 +16,14 @@
     send_raw_message(message.end_cell(), mode);
 }
     
-() send_jetton_ordinary( cell ctx_si,  slice to_owner_address, int jetton_amount, slice jw_address, int query_id, int mode ) impure {
+() send_jetton_ordinary( slice to_owner_address, int jetton_amount, slice jw_address, int query_id, int mode ) impure {
 
     builder message = 
         begin_cell()
             .store_uint(BOUNCEABLE, 6)
             .store_slice(jw_address)
             .store_coins(ONE_TONem5)
-            .store_statinit_ref_and_body_ref(
-                ctx_si,
+            .store_only_body_ref(
                 begin_cell()
                     .store_op(op::jetton::transfer) 
                     .store_query_id(query_id)
@@ -41,16 +40,16 @@
     send_raw_message(message.end_cell(), mode);
 }
 
-() send_jetton_order( cell ctx_si, slice to_owner_address, int jetton_amount, int query_id, int order_id, int mode ) impure {
+() send_jetton_order( slice to_owner_address, int jetton_amount, int query_id, int order_id, int mode ) impure {
     slice jw_address = null();
 
     if order_id == ASK_ID {
-        jw_address = index::calculate_jetton_wallet_address(ctx_si);
+        jw_address = glob::index_wallet_address;
     } elseif order_id == BID_ID {
-        jw_address = usdt::calculate_jetton_wallet_address(ctx_si);
+        jw_address = glob::usdt_wallet_address;
     } else {
         throw(error::invalid_order_type);
     }   
 
-    send_jetton_ordinary(ctx_si, to_owner_address, jetton_amount, jw_address, query_id, mode);
+    send_jetton_ordinary(to_owner_address, jetton_amount, jw_address, query_id, mode);
 }

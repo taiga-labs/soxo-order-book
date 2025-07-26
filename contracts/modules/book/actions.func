@@ -15,6 +15,11 @@
     glob::seqno =                 0;
     glob::admin_pbk =             in_msg_body~load_uint(256);
 
+    slice addia = in_msg_body~load_ref().begin_parse();
+
+    glob::usdt_wallet_address =  addia~load_msg_addr();
+    glob::index_wallet_address = addia~load_msg_addr();
+
     set_globals();
 }
 
@@ -32,18 +37,12 @@
     int priority = signed_slice~load_uint(PRIORITY_LEN);
 
     if inner_op == op::ob::make_ask {
-        ;; usdt::calculate_jetton_wallet_address
-        slice ctx_usdt_jw = usdt::calculate_user_jetton_wallet_address(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
-
-        throw_unless(error::not_usdt_jetton, equal_slices_bits(sender_address, ctx_usdt_jw));
         add_ask(priority, from_address, msg_jetton_amount, query_id);
         set_globals();
         return ();
     }
 
     if inner_op == op::ob::make_bid {
-        slice ctx_index_jw = index::calculate_user_jetton_wallet_address(my_address(), glob::index_master_address, init::index_wallet_code);
-        throw_unless(error::not_index_jetton, equal_slices_bits(sender_address, ctx_index_jw));
         add_bid(priority, from_address, msg_jetton_amount, query_id);
         set_globals();
         return ();
@@ -68,15 +67,10 @@
     ( _, int user_address_std ) = parse_std_addr(user_address);
     ( cell asks, cell bids ) = extract_asks_bids(priority);
 
-    cell ctx_si = null();
     if askbid? == BID_ID {
-        ctx_si = index::calculate_jetton_wallet_state_init(my_address(), glob::index_master_address, init::index_wallet_code);
-
-        int success = TRUE;
-        int pivot_id = -1;
-        int exists? = FALSE;
-        int jetton_amount = 0;
-
+        (int success, int exists?) = (TRUE, FALSE);
+        (int jetton_amount, int pivot_id) = (0, -1);
+        
         ;; CHECK EXISTENCE
         do {
             ( pivot_id, slice bid_info, success ) = bids.udict_get_next?(ASKS_BIDS_ID_LEN, pivot_id);
@@ -96,16 +90,12 @@
         glob::index_jetton_balance -= jetton_amount;
         throw_unless(error::not_exists_while_cancel, exists?);
        
-        send_jetton_order(ctx_si, user_address, jetton_amount, query_id, ASK_ID, SEND_MODE_PAY_FEES_SEPARATELY);
+        send_jetton_order(user_address, jetton_amount, query_id, ASK_ID, SEND_MODE_PAY_FEES_SEPARATELY);
         pack_asks_bids(priority, asks, bids);
 
     } elseif askbid? == ASK_ID {
-        ctx_si = usdt::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
-
-        int success = TRUE;
-        int pivot_id = -1;
-        int exists? = FALSE;
-        int jetton_amount = 0;
+        (int success, int exists?) = (TRUE, FALSE);
+        (int jetton_amount, int pivot_id) = (0, -1);
 
         ;; CHECK EXISTENCE
         do {
@@ -128,7 +118,7 @@
 
         glob::usdt_balance -= jetton_amount;
 
-        send_jetton_order(ctx_si, user_address, jetton_amount, query_id, BID_ID, SEND_MODE_PAY_FEES_SEPARATELY);
+        send_jetton_order(user_address, jetton_amount, query_id, BID_ID, SEND_MODE_PAY_FEES_SEPARATELY);
         pack_asks_bids(priority, asks, bids);
 
     } else {

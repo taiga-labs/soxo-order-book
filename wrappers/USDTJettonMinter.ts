@@ -87,4 +87,9 @@ export class USDTJettonMinter implements Contract {
             jettonWalletCode: stack.readCell()
         };
     };
+    
+    async getWalletAddress(provider: ContractProvider, owner: Address): Promise<Address> {
+        const res = await provider.get('get_wallet_address', [{ type: 'slice', cell: beginCell().storeAddress(owner).endCell() }]);
+        return res.stack.readAddress();
+    };
 }

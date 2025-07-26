@@ -14,10 +14,10 @@ export async function run(provider: NetworkProvider) {
 
         orderBookCode:  await compile("OrderBook"),
 
-        usdtWalletCode: await compile("JettonWallet"),
+        usdtWalletCode: await compile("USDTJettonWallet"),
         indexChannelWalletCode:  await compile("JettonWallet"),
     }, await compile('BookMinter')));
 
-    await bookMinter.sendDeploy(provider.sender(), toNano("0.05"));
+    await bookMinter.sendDeploy(provider.sender(), toNano("0.02"));
     await provider.waitForDeploy(bookMinter.address);
 }

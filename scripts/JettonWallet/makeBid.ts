@@ -6,13 +6,12 @@ import { mnemonicToPrivateKey } from "@ton/crypto";
 import { OrderBook } from '../../wrappers/OrderBook';
 
 dotenv.config();
-const INDEX_JETTON_WALLET_ADDRESS = "kQDtHQpf8d9cI1Sq1ZOYvlJNvSZiGZNmiGL5ngh1ebGwLp2a"
+const INDEX_JETTON_WALLET_ADDRESS = process.env.INDEX_JETTON_WALLET_ADDRESS as string;
 const ORDER_BOOK_ADDRESS = process.env.ORDER_BOOK_ADDRESS as string;
 const ORDER_BOOK_ADMIN_MNEMONIC = process.env.ORDER_BOOK_ADMIN_MNEMONIC as string;
 
-// 1 !!!
 const PRIORITY: number = 1;
-const INDEX_AMOUNT = 5;
+const INDEX_AMOUNT = 1;
 
 export async function run(provider: NetworkProvider) {
     const userJettonWallet = provider.open(JettonWallet.createFromAddress(Address.parse(INDEX_JETTON_WALLET_ADDRESS)));

@@ -45,8 +45,6 @@ export type OrderBookConfig = {
     owner_address: Address;
     admin_address: Address
     book_minter_address: Address;
-    usdt_wallet_code: Cell;
-    index_wallet_code: Cell;
 };  
 
 export function orderBookConfigToCell(config: OrderBookConfig): Cell {
@@ -60,13 +58,7 @@ export function orderBookConfigToCell(config: OrderBookConfig): Cell {
                         beginCell()
                             .storeAddress(config.owner_address)
                             .storeAddress(config.admin_address)
-                        .endCell()
-                    )
-                    .storeRef(
-                        beginCell()
                             .storeAddress(config.book_minter_address)
-                            .storeRef(config.usdt_wallet_code)
-                            .storeRef(config.index_wallet_code)
                         .endCell()
                     )
                 .endCell()

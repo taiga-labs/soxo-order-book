@@ -19,7 +19,6 @@ const ORDER_QUEUES_KEY_LEN: number = 16;
 
 const ADMIN_ADDRESS = process.env.ADMIN_ADDRESS as string;
 const ORDER_BOOK_ADMIN_MNEMONIC = process.env.ORDER_BOOK_ADMIN_MNEMONIC as string;
-// const USDT_MINTER_CODE = process.env.USDT_MINTER_CODE as string;
 
 describe('BookMinter', () => {
     let bookMinterCode: Cell;
@@ -133,8 +132,6 @@ describe('BookMinter', () => {
             owner_address: ACTAdmin.address,
             admin_address: ACTAdmin.address,
             book_minter_address: SCbookMinter.address,
-            usdt_wallet_code: usdtWalletCode,
-            index_wallet_code: indexWalletCode,
         }, orderBookCode));
 
         // ALICE AND HER INDEX WALLET ----------------------------------------------------------------------------------------------
@@ -173,6 +170,9 @@ describe('BookMinter', () => {
             owner: SCorderBook.address,
             minter: SCusdtMinter.address,
         }, usdtWalletCode));
+
+        await SCindexMinter.sendDeploy(ACTdeployer.getSender(), toNano('0.05'))
+        await SCusdtMinter.sendDeploy(ACTdeployer.getSender(), toNano('0.05'))
     
     }, TIMEOUT);
 
@@ -193,6 +193,8 @@ describe('BookMinter', () => {
             qi: BigInt(Math.floor(Date.now() / 1000)),
             indexJettonMasterAddress: SCindexMinter.address,
             adminPbk: OBAkeyPair.publicKey,
+            indexWallerAddressOB: await SCindexMinter.getWalletAddress(SCorderBook.address),
+            usdtWalletAddressOB: await SCusdtMinter.getWalletAddress(SCorderBook.address),
         });
 
         expect(deployResult.transactions).toHaveTransaction({

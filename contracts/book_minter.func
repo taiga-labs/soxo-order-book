@@ -49,13 +49,7 @@ cell pack_order_book_init_storage( slice init::owner_address )  {
                         begin_cell()
                             .store_slice(init::owner_address)
                             .store_slice(glob::admin_address)
-                        .end_cell()
-                    )
-                    .store_ref(
-                        begin_cell()
                             .store_slice(my_address())
-                            .store_ref(glob::usdt_wallet_code)
-                            .store_ref(glob::index_channel_wallet_code)
                         .end_cell()
                     )
                 .end_cell()  
@@ -126,6 +120,10 @@ slice calculate_order_book_address( cell state_init ) inline {
         slice index_jetton_master_address = in_msg_body~load_msg_addr();
         int admin_pbk = in_msg_body~load_uint(256);
 
+        slice addia = in_msg_body~load_ref().begin_parse();
+        slice usdt_wallet_address = addia~load_msg_addr();
+        slice index_wallet_address = addia~load_msg_addr();
+
         deploy_new_order_book(
             pack_order_book_init_storage(
                 sender_address
@@ -136,6 +134,12 @@ slice calculate_order_book_address( cell state_init ) inline {
                 .store_slice(glob::usdt_master_address)
                 .store_slice(index_jetton_master_address)
                 .store_uint(admin_pbk, 256)
+                .store_ref(
+                    begin_cell()
+                        .store_slice(usdt_wallet_address)
+                        .store_slice(index_wallet_address)
+                    .end_cell()
+                )
             .end_cell(), 
             my_balance, msg_value
         );

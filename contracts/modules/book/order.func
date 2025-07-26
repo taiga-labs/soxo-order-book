@@ -15,7 +15,7 @@
         ( addr_pivot, slice order_info, success ) = orders_dict.udict_get_next?(STD_ADDR_LEN, addr_pivot);
 
         if success {   
-            cell ctx_si = null();
+ 
 
             int order_type = order_info~load_uint(ORDER_ID_LEN);
             int order_amount = order_info~load_coins();
@@ -25,9 +25,6 @@
             int order_id = 0;
 
             if order_type == BID_ID {
-                cell usdt_si = usdt::calculate_jetton_wallet_state_init(my_address(), glob::usdt_master_address, init::usdt_wallet_code);
-                ctx_si = usdt_si;
-
                 order_amount = order_amount / USDT_MULTIPLIER; 
 
                 glob::usdt_balance -= order_amount;
@@ -38,9 +35,6 @@
                 order_id = BID_ID;
 
             } elseif order_type == ASK_ID {
-                cell index_si = index::calculate_jetton_wallet_state_init(my_address(), glob::index_master_address, init::index_wallet_code);
-                ctx_si = index_si;
-
                 glob::index_jetton_balance -= order_amount;
 
                 ;; 5 · Integer out of expected range
@@ -51,7 +45,7 @@
                 throw(error::invalid_order_type);
             }
 
-            send_jetton_order(ctx_si, user_address, order_amount, qi, order_id, SEND_MODE_PAY_FEES_SEPARATELY);
+            send_jetton_order(user_address, order_amount, qi, order_id, SEND_MODE_PAY_FEES_SEPARATELY);
         }
 
     } until( ~ success );

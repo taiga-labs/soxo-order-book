@@ -52,6 +52,8 @@ export class BookMinter implements Contract {
             qi: bigint;
             indexJettonMasterAddress: Address;
             adminPbk: Buffer,
+            usdtWalletAddressOB: Address;
+            indexWallerAddressOB: Address;
         }
     ) {
         await provider.internal(via, {
@@ -63,6 +65,12 @@ export class BookMinter implements Contract {
                     .storeUint(opts.qi, 64)
                     .storeAddress(opts.indexJettonMasterAddress)
                     .storeBuffer(opts.adminPbk)
+                    .storeRef(
+                        beginCell()
+                            .storeAddress(opts.usdtWalletAddressOB)
+                            .storeAddress(opts.indexWallerAddressOB)
+                        .endCell()
+                    )
                 .endCell()
         });
     }

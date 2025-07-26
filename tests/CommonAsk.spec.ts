@@ -136,8 +136,6 @@ describe('BookMinter', () => {
             owner_address: ACTAdmin.address,
             admin_address: ACTAdmin.address,
             book_minter_address: SCbookMinter.address,
-            usdt_wallet_code: usdtWalletCode,
-            index_wallet_code: indexWalletCode,
         }, orderBookCode));
 
         // BOB AND HIS USDT WALLET ----------------------------------------------------------------------------------------------
@@ -158,6 +156,9 @@ describe('BookMinter', () => {
             minter: SCusdtMinter.address,
         }, usdtWalletCode));
     
+        await SCindexMinter.sendDeploy(ACTdeployer.getSender(), toNano('0.05'))
+        await SCusdtMinter.sendDeploy(ACTdeployer.getSender(), toNano('0.05'))
+        
     }, TIMEOUT);
 
     it('should make ask', async () => {
@@ -178,6 +179,8 @@ describe('BookMinter', () => {
             qi: BigInt(Math.floor(Date.now() / 1000)),
             indexJettonMasterAddress: SCindexMinter.address,
             adminPbk: OBAkeyPair.publicKey,
+            indexWallerAddressOB: await SCindexMinter.getWalletAddress(SCorderBook.address),
+            usdtWalletAddressOB: await SCusdtMinter.getWalletAddress(SCorderBook.address),
         });
 
         expect(deployResult.transactions).toHaveTransaction({
