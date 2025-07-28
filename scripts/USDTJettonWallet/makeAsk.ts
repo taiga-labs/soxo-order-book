@@ -13,7 +13,7 @@ const ORDER_BOOK_ADDRESS = process.env.ORDER_BOOK_ADDRESS as string;
 const ORDER_BOOK_ADMIN_MNEMONIC = process.env.ORDER_BOOK_ADMIN_MNEMONIC as string;
 
 const PRIORITY: number = 1;
-const USDT_AMOUNT: number = 2;
+const USDT_AMOUNT: number = 1.2;
 
 export async function run(provider: NetworkProvider) {
     
