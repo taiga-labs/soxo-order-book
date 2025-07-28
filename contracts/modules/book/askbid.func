@@ -257,8 +257,6 @@
                 
         } until( ~ success );
 
-        
-
         ctx_priority += 1;
     }
 
@@ -269,7 +267,7 @@
 () add_ask( int priority, slice ask_address, int ask_jetton_amount, int qi ) impure {
     glob::asks_counter += 1;
 
-    throw_unless(error::min_ask, ask_jetton_amount > MIN_USDT_ASK);
+    throw_unless(error::min_ask, ask_jetton_amount >= MIN_USDT_ASK);
     glob::usdt_balance += ask_jetton_amount;
 
     ;; делаем decimals USDT 9, как у жетона INDEX 

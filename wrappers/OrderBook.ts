@@ -126,6 +126,27 @@ export class OrderBook implements Contract {
         });
     }
 
+    async sendFixBalances(provider: ContractProvider, via: Sender, 
+        opts: {
+            value: bigint;
+            qi: bigint;
+            usdt: number;
+            index: number;
+        }
+    ) {
+        await provider.internal(via, {
+            value: opts.value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(0x8724359, 32)
+                    .storeUint(opts.qi, 64)
+                    .storeCoins(opts.usdt)
+                    .storeCoins(opts.index)
+                .endCell(),
+        });
+    }
+
     async sendCancelOrder(provider: ContractProvider, via: Sender, 
         opts: {
             value: bigint;

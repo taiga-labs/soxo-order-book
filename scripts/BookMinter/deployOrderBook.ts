@@ -23,7 +23,7 @@ export async function run(provider: NetworkProvider) {
     const usdtMinter = provider.open(USDTJettonMinter.createFromAddress(Address.parse(USDT_MASTER_ADDRESS)));
 
     const orderBook = provider.open(OrderBook.createFromConfig({
-        ffreeze: -1,
+        ffreeze: 0,
         owner_address: provider.sender().address as  Address,
         admin_address: Address.parse(ADMIN_ADDRESS),
         book_minter_address: Address.parse(BOOK_MINTER_ADDRESS)
@@ -31,6 +31,10 @@ export async function run(provider: NetworkProvider) {
 
     let indexWallerAddress = await indexMinter.getWalletAddress(orderBook.address)
     let usdtWalletAddress = await usdtMinter.getWalletAddress(orderBook.address)
+
+    console.log(orderBook.address.toString())
+    console.log(indexWallerAddress)
+    console.log(usdtWalletAddress)
 
     await bookMinter.sendDeployOrderBook(provider.sender(), {
         value: toNano("0.05"),

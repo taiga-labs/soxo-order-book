@@ -26,6 +26,6 @@ export async function run(provider: NetworkProvider) {
         seqno: seqno,
         priority: 1,
         orderType: BID_ID,
-        userAddress: Address.parse("0QCcZwYHTcqhqbh4LXx5imjiKCbXEh39zPzRN69iA_pvx_Pe")
+        userAddress: Address.parse("UQCRCFxjEaauB2sVdeOvrXAkuYaHGxSg84NC5lLmMcIjovpb")
     });
 }

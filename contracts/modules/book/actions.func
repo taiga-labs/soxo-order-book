@@ -19,8 +19,6 @@
 
     glob::usdt_wallet_address =  addia~load_msg_addr();
     glob::index_wallet_address = addia~load_msg_addr();
-
-    set_globals();
 }
 
 () action::jetton_transfer_notification(slice in_msg_body, int msg_value, int op_code, slice sender_address, int query_id) impure inline {
@@ -38,17 +36,15 @@
 
     if inner_op == op::ob::make_ask {
         add_ask(priority, from_address, msg_jetton_amount, query_id);
-        set_globals();
         return ();
     }
 
     if inner_op == op::ob::make_bid {
         add_bid(priority, from_address, msg_jetton_amount, query_id);
-        set_globals();
         return ();
     } 
     throw(error::not_an_order_id);
-    
+    return();
 }
 
 
@@ -124,17 +120,13 @@
     } else {
         throw(error::invalid_order_type);
     }
-
-    set_globals();
     return();
-    
 }
 
 int action::admin_actions(slice in_msg_body, int op_code, slice sender_address) impure inline {
      if op_code == op::ob::recv_new_session {
         throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
         glob::trading_session_price = in_msg_body~load_coins();
-        set_globals();
         return 0;
     }
 
@@ -142,21 +134,18 @@ int action::admin_actions(slice in_msg_body, int op_code, slice sender_address) 
         throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
         glob::usdt_balance = in_msg_body~load_coins();
         glob::index_jetton_balance = in_msg_body~load_coins();
-        set_globals();
         return 0;
     }
 
     if op_code == op::ob::freeze {
         throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
         glob::ffreeze = in_msg_body~load_int(FFREZE_LEN);
-        set_globals();
         return 0;
     }
 
     if op_code == op::ob::change_admin {
         throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
         init::admin_address = in_msg_body~load_msg_addr();
-        set_globals();
         return 0;
     }
 

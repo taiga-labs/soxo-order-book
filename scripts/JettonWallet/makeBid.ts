@@ -4,22 +4,30 @@ import { JettonWallet } from '../../wrappers/JettonWallet';
 import { NetworkProvider } from '@ton/blueprint';
 import { mnemonicToPrivateKey } from "@ton/crypto";
 import { OrderBook } from '../../wrappers/OrderBook';
+import { JettonMinter } from '../../wrappers/JettonMinter';
 
 dotenv.config();
-const INDEX_JETTON_WALLET_ADDRESS = process.env.INDEX_JETTON_WALLET_ADDRESS as string;
+
+const USER_ADDRESS = process.env.USER_ADDRESS as string;
+const INDEX_MASTER_ADDRESS = process.env.INDEX_MASTER_ADDRESS as string;
 const ORDER_BOOK_ADDRESS = process.env.ORDER_BOOK_ADDRESS as string;
 const ORDER_BOOK_ADMIN_MNEMONIC = process.env.ORDER_BOOK_ADMIN_MNEMONIC as string;
 
 const PRIORITY: number = 1;
-const INDEX_AMOUNT = 1;
+const INDEX_AMOUNT = 3;
 
 export async function run(provider: NetworkProvider) {
-    const userJettonWallet = provider.open(JettonWallet.createFromAddress(Address.parse(INDEX_JETTON_WALLET_ADDRESS)));
     const orderBook = provider.open(OrderBook.createFromAddress(Address.parse(ORDER_BOOK_ADDRESS)));
 
     let mnemonics: string[] = ORDER_BOOK_ADMIN_MNEMONIC.split(" ")
     let keyPair = await mnemonicToPrivateKey(mnemonics);
     let seqno = await orderBook.getSeqno()
+
+    const indexMinter = provider.open(JettonMinter.createFromAddress(Address.parse(INDEX_MASTER_ADDRESS)));
+    const addr = await indexMinter.getWalletAddress(Address.parse(USER_ADDRESS))
+    
+
+    const userJettonWallet = provider.open(JettonWallet.createFromAddress(addr));
 
     await userJettonWallet.sendTransfer(provider.sender(), {
         value: toNano("0.15"),

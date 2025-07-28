@@ -35,22 +35,26 @@
         throw_unless(error::forbitten, equal_slices_bits(init::book_minter_address, sender_address));
         if op_code == op::minter_book_init {
             action::init(in_msg_body, op_code);
+            set_globals();
             return ();
         }
     }
 
     if op_code == op::jetton_transfer_notification { 
         action::jetton_transfer_notification(in_msg_body, msg_value, op_code, sender_address, query_id);
+        set_globals();
         return ();
     }
 
     if op_code == op::ob::cancel_order {
         action::cancel_order(in_msg_body, msg_value, op_code, sender_address, query_id);
+        set_globals();
         return ();
     }
 
     int err = action::admin_actions(in_msg_body, op_code, sender_address);
     if err == 0 {
+        set_globals();
         return ();
     }
 
