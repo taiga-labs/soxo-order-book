@@ -50,7 +50,6 @@ export type OrderBookConfig = {
 export function orderBookConfigToCell(config: OrderBookConfig): Cell {
     return (
         beginCell()
-
             .storeInt(config.ffreeze, FFREZE_LEN)
             .storeRef(
                 beginCell()
@@ -143,6 +142,27 @@ export class OrderBook implements Contract {
                     .storeUint(opts.qi, 64)
                     .storeCoins(opts.usdt)
                     .storeCoins(opts.index)
+                .endCell(),
+        });
+    }
+
+    async sendClaimTons(provider: ContractProvider, via: Sender, 
+        opts: {
+            value: bigint;
+            qi: bigint;
+            amount: bigint;
+            toAddress: Address;
+        }
+    ) {
+        await provider.internal(via, {
+            value: opts.value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(0x3456, 32)
+                    .storeUint(opts.qi, 64)
+                    .storeCoins(opts.amount)
+                    .storeAddress(opts.toAddress)
                 .endCell(),
         });
     }
