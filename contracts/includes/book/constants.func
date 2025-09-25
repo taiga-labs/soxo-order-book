@@ -8,10 +8,12 @@ const int ORDER_QUEUES_KEY_LEN = 16;
 const int ASKS_BIDS_ID_LEN =     64;
 const int ASKS_BIDS_NUMBER_LEN = 64;
 
+const int TS_PRICE_LEN =      32;
+
 const int BID_ID =            1;
 const int ASK_ID =            2;
 const int PRIORITIES_NUMBER = 10;
-const int TSP_DIVIDER =       1000000;
+const int TSP_DIVIDER =       1000;
 const int USDT_MULTIPLIER =   1000;
 const int MIN_USDT_ASK =      1000000;
 

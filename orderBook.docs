@@ -1,6 +1,6 @@
 
-;; выпалта за BID - отправялем USDT(1). Отправляем INDEX
-;; выплата за ASK - отправляем INDEX(2). Отправляем USDT
+;; выпалта за BID -Отправляем INDEX
+;; выплата за ASK - Отправляем USDT
 
 {-
     glob::porder_queues
@@ -17,12 +17,14 @@
         │   ├── key:   int --> ask_id
         │   └── value: builder --> ask_info 
         │        ├── ask_amount: int
-        │        └── asker_address: slice
+        │        ├── asker_address: slice
+        │        └── ts_price: int
         │
         │── bids
         │   ├── key:   int --> bid_id
         │   └── value: builder --> bid_info
         │        ├── bid_amount: int
-        │        └── bidder_address: slice
+        │        ├── bidder_address: slice
+        │        └── ts_price: int
 
 -}

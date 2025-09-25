@@ -206,7 +206,8 @@ describe('BookMinter', () => {
         const TSPSettingResult = await SCorderBook.sendNewSession(ACTAdmin.getSender(), {
             value: toNano('0.01'),
             qi: BigInt(Math.floor(Date.now() / 1000)),
-            newTradingSessionPrice: 10n * TSP_DIVIDER, 
+            newTradingSessionPriceMin: 10n * TSP_DIVIDER, 
+            newTradingSessionPriceMax: 20n * TSP_DIVIDER, 
         })
 
         expect(TSPSettingResult.transactions).toHaveTransaction({
@@ -244,6 +245,7 @@ describe('BookMinter', () => {
                     .storeUint(await SCorderBook.getSeqno(), 32)
                     .storeUint(0xbf4385, 32)
                     .storeUint(ALICES_PRIORITY, 16) 
+                    .storeUint(10n * TSP_DIVIDER, 32)
                 .endCell()
             ),
             secretKey: OBAkeyPair.secretKey,

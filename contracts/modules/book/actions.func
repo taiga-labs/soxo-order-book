@@ -34,14 +34,19 @@
 
     int inner_op = signed_slice~load_op();
     int priority = signed_slice~load_uint(PRIORITY_LEN);
+    int ctx_ts_price = signed_slice~load_uint(TS_PRICE_LEN);
+
+    if ((ctx_ts_price < glob::trading_session_price_min) | (ctx_ts_price > glob::trading_session_price_max)) {
+        throw(error:ts_price_out_of_range);
+    }
 
     if inner_op == op::ob::make_ask {
-        add_ask(priority, from_address, msg_jetton_amount, query_id);
+        add_ask(priority, from_address, msg_jetton_amount, ctx_ts_price, query_id);
         return ();
     }
 
     if inner_op == op::ob::make_bid {
-        add_bid(priority, from_address, msg_jetton_amount, query_id);
+        add_bid(priority, from_address, msg_jetton_amount, ctx_ts_price, query_id);
         return ();
     } 
     throw(error::not_an_order_id);

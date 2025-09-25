@@ -1,11 +1,10 @@
+;; Второй аргумент в check - это сколько осталось от суммы ордера после первичной проверки
 
-( cell, int ) check_asks( cell resulting_orders_dict, int bid_index_amount ) impure {
+( cell, int ) check_asks( cell resulting_orders_dict, int bid_index_amount, int offer_ts_price ) impure {
 
     int ctx_priority = 1;
 
-    ;; - Сколько нкжно заплатить USDT, чтобы перебить конкретный BID? 
-    ;; - iterable_bid USDT
-    int iterable_bid = get_usdt(bid_index_amount);
+    int iterable_bid = get_usdt(bid_index_amount, offer_ts_price);
 
     while ( ctx_priority <= PRIORITIES_NUMBER ) {
         ( cell ctx_asks, cell bids ) = extract_asks_bids(ctx_priority);
@@ -15,97 +14,107 @@
 
         do {
             ( pivot_id, slice ask_info, success ) = ctx_asks.udict_get_next?(ASKS_BIDS_ID_LEN, pivot_id);
-
             if success {
                 int ctx_ask_usdt_amount = ask_info~load_coins();
                 slice ctx_addr = ask_info~load_msg_addr();
-                (_, int ctx_std_addr) = parse_std_addr(ctx_addr);
+                int ctx_ts_price = ask_info~load_uint(TS_PRICE_LEN);
 
-                int converted_ctx_ask_usdt_amount = get_index(ctx_ask_usdt_amount);
-                int dist = iterable_bid - ctx_ask_usdt_amount;
+                ;; Если цена BID из текущего диапазона совпадает с ASK'ом, который мы хотим покрыть - идём дальше
+                ;; Иначе берём другой ASK
+                
+                if (ctx_ts_price == offer_ts_price) {
 
-                if dist == 0 {
-                    ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr);
-                    if exists {
-                        int order_id = ctx_info~load_uint(ORDER_ID_LEN);
-                        int previous_coins_amount = ctx_info~load_coins();
+                    (_, int ctx_std_addr) = parse_std_addr(ctx_addr);
 
-                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                            STD_ADDR_LEN, ctx_std_addr, 
-                            begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount + previous_coins_amount)
-                        ); 
+                    ;; Получаем количество INDEX, которое по текущей 
+                    ;; цене равно количеству USDT в данном ASK, что мы перебираем
 
-                    } else {
-                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                            STD_ADDR_LEN, ctx_std_addr, 
-                            begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount)
+                    int converted_ctx_ask_usdt_amount = get_index(ctx_ask_usdt_amount, offer_ts_price);
+                    int dist = iterable_bid - ctx_ask_usdt_amount;
+
+                    if dist == 0 {
+                        ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr);
+                        if exists {
+                            int order_id = ctx_info~load_uint(ORDER_ID_LEN);
+                            int previous_coins_amount = ctx_info~load_coins();
+
+                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                                STD_ADDR_LEN, ctx_std_addr, 
+                                begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount + previous_coins_amount)
+                            ); 
+
+                        } else {
+                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                                STD_ADDR_LEN, ctx_std_addr, 
+                                begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount)
+                            );
+                        }
+
+                        ( ctx_asks, int suc ) = ctx_asks.udict_delete?(ASKS_BIDS_ID_LEN, pivot_id);
+                        throw_unless(error:no_comments, suc);
+
+                        ;; glob::asks_counter -= 1;
+
+                        iterable_bid -= ctx_ask_usdt_amount;
+                        pack_asks_bids(ctx_priority, ctx_asks, bids);
+
+                        success = FALSE;
+                        ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
+                    } elseif dist > 0 {  
+                        ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr);
+                        if exists {
+                            int order_id = ctx_info~load_uint(ORDER_ID_LEN);
+                            int previous_coins_amount = ctx_info~load_coins();
+
+                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                                STD_ADDR_LEN, ctx_std_addr, 
+                                begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount + previous_coins_amount)
+                            ); 
+
+                        } else {
+                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                                STD_ADDR_LEN, ctx_std_addr, 
+                                begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount)
+                            ); 
+                        }
+
+                        ( ctx_asks, int suc ) = ctx_asks.udict_delete?(ASKS_BIDS_ID_LEN, pivot_id);
+                        throw_unless(error:no_comments, suc);
+
+                        ;; glob::asks_counter -= 1;
+
+                        iterable_bid -= ctx_ask_usdt_amount;
+                        pack_asks_bids(ctx_priority, ctx_asks, bids);
+
+                    } else { 
+                        ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr);
+                        if exists {
+                            int order_id = ctx_info~load_uint(ORDER_ID_LEN);
+                            int previous_coins_amount = ctx_info~load_coins();
+
+                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                                STD_ADDR_LEN, ctx_std_addr, 
+                                begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(get_index(iterable_bid, offer_ts_price) + previous_coins_amount)
+                            ); 
+
+                        } else {
+                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                                STD_ADDR_LEN, ctx_std_addr, 
+                                begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(get_index(iterable_bid, offer_ts_price))
+                            ); 
+                        }
+                            
+                        ctx_asks = ctx_asks.udict_set_builder(
+                            ASKS_BIDS_ID_LEN, pivot_id, 
+                            begin_cell().store_coins(ctx_ask_usdt_amount - iterable_bid).store_slice(ctx_addr).store_uint(offer_ts_price, TS_PRICE_LEN)
                         );
+
+                        iterable_bid -= iterable_bid;
+                        pack_asks_bids(ctx_priority, ctx_asks, bids);
+
+                        success = FALSE;
+                        ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
                     }
-
-                    ( ctx_asks, int suc ) = ctx_asks.udict_delete?(ASKS_BIDS_ID_LEN, pivot_id);
-                    throw_unless(error:no_comments, suc);
-
-                    ;; glob::asks_counter -= 1;
-
-                    iterable_bid -= ctx_ask_usdt_amount;
-                    pack_asks_bids(ctx_priority, ctx_asks, bids);
-
-                    success = FALSE;
-                    ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
-                } elseif dist > 0 {  
-                    ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr);
-                    if exists {
-                        int order_id = ctx_info~load_uint(ORDER_ID_LEN);
-                        int previous_coins_amount = ctx_info~load_coins();
-
-                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                            STD_ADDR_LEN, ctx_std_addr, 
-                            begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount + previous_coins_amount)
-                        ); 
-
-                    } else {
-                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                            STD_ADDR_LEN, ctx_std_addr, 
-                            begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(converted_ctx_ask_usdt_amount)
-                        ); 
-                    }
-
-                    ( ctx_asks, int suc ) = ctx_asks.udict_delete?(ASKS_BIDS_ID_LEN, pivot_id);
-                    throw_unless(error:no_comments, suc);
-
-                    ;; glob::asks_counter -= 1;
-
-                    iterable_bid -= ctx_ask_usdt_amount;
-                    pack_asks_bids(ctx_priority, ctx_asks, bids);
-
-                } else { 
-                    ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr);
-                    if exists {
-                        int order_id = ctx_info~load_uint(ORDER_ID_LEN);
-                        int previous_coins_amount = ctx_info~load_coins();
-
-                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                            STD_ADDR_LEN, ctx_std_addr, 
-                            begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(get_index(iterable_bid) + previous_coins_amount)
-                        ); 
-
-                    } else {
-                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                            STD_ADDR_LEN, ctx_std_addr, 
-                            begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(get_index(iterable_bid))
-                        ); 
-                    }
-                        
-                    ctx_asks = ctx_asks.udict_set_builder(
-                        ASKS_BIDS_ID_LEN, pivot_id, 
-                        begin_cell().store_coins(ctx_ask_usdt_amount - iterable_bid).store_slice(ctx_addr)
-                    );
-
-                    iterable_bid -= iterable_bid;
-                    pack_asks_bids(ctx_priority, ctx_asks, bids);
-
-                    success = FALSE;
-                    ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
                 }
             }
         } until( ~ success );
@@ -115,13 +124,13 @@
         
     } 
 
-    return ( resulting_orders_dict, get_index(iterable_bid) );
+    return ( resulting_orders_dict, get_index(iterable_bid, offer_ts_price) );
 }
 
 ;; тут разраешются ASK(запрос покупки INDEX за USDT), то есть на выходе в 
 ;; идеальном случае тому, кто сделал ASK - перейдут INDEX, а всем BID, которые этот ASK покрыли - USDT
 
-( cell, int ) check_bids( cell resulting_orders_dict, int ask_usdt_amount ) impure {
+( cell, int ) check_bids( cell resulting_orders_dict, int ask_usdt_amount, int offer_ts_price ) impure {
 
     int ctx_priority = 1;
     int iterable_ask_usdt_amount = ask_usdt_amount;
@@ -142,119 +151,128 @@
 
             if success {
                 int ctx_index_bid_amount = bid_info~load_coins();
-
                 slice ctx_addr = bid_info~load_msg_addr();
-                (_, int ctx_std_addr) = parse_std_addr(ctx_addr);
+                int ctx_ts_price = bid_info~load_uint(TS_PRICE_LEN);
+
+                ;; Если цена ASK из текущего диапазона совпадает с BID'ом, который мы хотим покрыть - идём дальше
+                ;; Иначе берём другой BID
                 
-                int converted_ctx_index_bid_amount = get_usdt(ctx_index_bid_amount);
-                ;;       =           10_000_000_000 -                10_000_000_000
-                int dist = iterable_ask_usdt_amount - converted_ctx_index_bid_amount;
+                if (offer_ts_price = ctx_ts_price) {
 
-                ;; perfect fit!
-                if dist == 0 { ;; лучший вариант, текущий BID идеально покрыл оставшийся ASK => останваоиваем поиски, мы полностью покрыи наш ASK!
-                
-                    ;; добавялем в спсиок тех, кому надо отправить USDT за их BID, 
-                    ;; так как их INDEX, которые они отдали контакру, чтобы сделать этот BID - уйдут тому, чей ASK покрывается в этом цикле
+                    (_, int ctx_std_addr) = parse_std_addr(ctx_addr);
 
-                    ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr);
-                    if exists {
-                        int order_id = ctx_info~load_uint(ORDER_ID_LEN);
-                        int previous_coins_amount = ctx_info~load_coins();
+                    ;; Получаем количество USDT, которое по текущей 
+                    ;; цене равно количеству INDEX в данном BID, что мы перебираем
 
-                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                            STD_ADDR_LEN, ctx_std_addr, 
-                            begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_index_bid_amount + previous_coins_amount)
+                    int converted_ctx_index_bid_amount = get_usdt(ctx_index_bid_amount, offer_ts_price);
+                    int dist = iterable_ask_usdt_amount - converted_ctx_index_bid_amount;
+
+                    ;; perfect fit!
+                    if dist == 0 { ;; лучший вариант, текущий BID идеально покрыл оставшийся ASK => останваоиваем поиски, мы полностью покрыи наш ASK!
+                    
+                        ;; добавялем в спсиок тех, кому надо отправить USDT за их BID, 
+                        ;; так как их INDEX, которые они отдали контакру, чтобы сделать этот BID - уйдут тому, чей ASK покрывается в этом цикле
+
+                        ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr);
+                        if exists {
+                            int order_id = ctx_info~load_uint(ORDER_ID_LEN);
+                            int previous_coins_amount = ctx_info~load_coins();
+
+                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                                STD_ADDR_LEN, ctx_std_addr, 
+                                begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_index_bid_amount + previous_coins_amount)
+                            ); 
+                        } else {
+                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                                STD_ADDR_LEN, ctx_std_addr, 
+                                begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(converted_ctx_index_bid_amount)
+                            ); 
+                        }
+
+                        ;; удаляем этот BID и уменьшаем счётчик количества BID'ов, так как полностью покрыли его нашим ASK
+                        ( ctx_bids, int suc ) = ctx_bids.udict_delete?(ASKS_BIDS_ID_LEN, pivot_id);
+                        throw_unless(error:no_comments, suc);
+
+                        ;; glob::bids_counter -= 1;
+                        ;; уменьшаем объём ask'a (обнуляем)
+                        iterable_ask_usdt_amount -= converted_ctx_index_bid_amount;
+
+                        pack_asks_bids(ctx_priority, asks, ctx_bids);
+
+                        ;; выходим из цикла, так как мы уже покрыли ASK
+                        success = FALSE;
+                        ;; заканчиваем и глобальный цикл, который перебирает приоритеты
+                        ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
+
+                    } elseif dist > 0 { ;; значит, что текущий BID мы берём, но его не достаточно для покрытия всего ASK => идём искать дальше
+
+                        ;; добавялем в спсиок тех, кому надо отправить USDT за их BID, 
+                        ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr);
+                        if exists {
+                            int order_id = ctx_info~load_uint(ORDER_ID_LEN);
+                            int previous_coins_amount = ctx_info~load_coins();
+
+                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                                STD_ADDR_LEN, ctx_std_addr, 
+                                begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_index_bid_amount + previous_coins_amount)
+                            ); 
+                        } else {
+                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                                STD_ADDR_LEN, ctx_std_addr, 
+                                begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(converted_ctx_index_bid_amount)
+                            ); 
+                        }
+
+                        ;; удаляем этот BID и уменьшаем счётчик количества BID'ов, так как полностью покрыли его нашим ASK
+                        ( ctx_bids, int suc ) = ctx_bids.udict_delete?(ASKS_BIDS_ID_LEN, pivot_id);
+                        throw_unless(error:no_comments, suc);
+
+                        ;; glob::bids_counter -= 1;
+
+                        ;; уменьшаем объём ask'a
+                        iterable_ask_usdt_amount -= converted_ctx_index_bid_amount;
+
+                        pack_asks_bids(ctx_priority, asks, ctx_bids);
+
+                        ;; но мы идём дальше, чтобы постараться покрыть ASK полностью
+
+                    } else { ;; dist < 0 (значит текущий BID с запасом покрывает оставшийся ASK)
+
+                        ;; добавялем в спсиок тех, кому надо отправить USDT за их BID, НО! 
+                        ;; добавляем ему не полный его BID, а только нужую для покрытия ASK часть, то есть iterable_ask_usdt_amount
+                        ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr);
+                        if exists {
+                            int order_id = ctx_info~load_uint(ORDER_ID_LEN);
+                            int previous_coins_amount = ctx_info~load_coins();
+
+                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                                STD_ADDR_LEN, ctx_std_addr, 
+                                begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(iterable_ask_usdt_amount + previous_coins_amount)
+                            ); 
+
+                        } else {
+                            resulting_orders_dict = resulting_orders_dict.udict_set_builder(
+                                STD_ADDR_LEN, ctx_std_addr, 
+                                begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(iterable_ask_usdt_amount)
+                            ); 
+                        }
+
+                        ;; мы не удаляем текущий BID, а просто его уменьшаем на iterable_ask_usdt_amount, который "откусили" от него, и конвертируем обратно в INDEX
+                        int rem_index_amount = get_index(converted_ctx_index_bid_amount  - iterable_ask_usdt_amount, offer_ts_price);
+                        ctx_bids = ctx_bids.udict_set_builder(
+                            ASKS_BIDS_ID_LEN, pivot_id, begin_cell().store_coins(rem_index_amount).store_slice(ctx_addr).store_uint(offer_ts_price, TS_PRICE_LEN)
                         ); 
-                    } else {
-                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                            STD_ADDR_LEN, ctx_std_addr, 
-                            begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(converted_ctx_index_bid_amount)
-                        ); 
+
+                        ;; уменьшаем объём ask'a (обнуляем)
+                        iterable_ask_usdt_amount -= iterable_ask_usdt_amount;
+
+                        pack_asks_bids(ctx_priority, asks, ctx_bids);
+
+                        ;; выходим из цикла, так как мы уже покрыли ASK
+                        success = FALSE;
+                        ;; заканчиваем и глобальный цикл, который перебирает приоритеты
+                        ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
                     }
-
-                    ;; удаляем этот BID и уменьшаем счётчик количества BID'ов, так как полностью покрыли его нашим ASK
-                    ( ctx_bids, int suc ) = ctx_bids.udict_delete?(ASKS_BIDS_ID_LEN, pivot_id);
-                    throw_unless(error:no_comments, suc);
-
-                    ;; glob::bids_counter -= 1;
-                    ;; уменьшаем объём ask'a (обнуляем)
-                    iterable_ask_usdt_amount -= converted_ctx_index_bid_amount;
-
-                    pack_asks_bids(ctx_priority, asks, ctx_bids);
-
-                    ;; выходим из цикла, так как мы уже покрыли ASK
-                    success = FALSE;
-                    ;; заканчиваем и глобальный цикл, который перебирает приоритеты
-                    ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
-
-                } elseif dist > 0 { ;; значит, что текущий BID мы берём, но его не достаточно для покрытия всего ASK => идём искать дальше
-
-                    ;; добавялем в спсиок тех, кому надо отправить USDT за их BID, 
-                    ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr);
-                    if exists {
-                        int order_id = ctx_info~load_uint(ORDER_ID_LEN);
-                        int previous_coins_amount = ctx_info~load_coins();
-
-                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                            STD_ADDR_LEN, ctx_std_addr, 
-                            begin_cell().store_uint(order_id, ORDER_ID_LEN).store_coins(converted_ctx_index_bid_amount + previous_coins_amount)
-                        ); 
-                    } else {
-                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                            STD_ADDR_LEN, ctx_std_addr, 
-                            begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(converted_ctx_index_bid_amount)
-                        ); 
-                    }
-
-                    ;; удаляем этот BID и уменьшаем счётчик количества BID'ов, так как полностью покрыли его нашим ASK
-                    ( ctx_bids, int suc ) = ctx_bids.udict_delete?(ASKS_BIDS_ID_LEN, pivot_id);
-                    throw_unless(error:no_comments, suc);
-
-                    ;; glob::bids_counter -= 1;
-
-                    ;; уменьшаем объём ask'a
-                    iterable_ask_usdt_amount -= converted_ctx_index_bid_amount;
-
-                    pack_asks_bids(ctx_priority, asks, ctx_bids);
-
-                    ;; но мы идём дальше, чтобы постараться покрыть ASK полностью
-
-                } else { ;; dist < 0 (значит текущий BID с запасом покрывает оставшийся ASK)
-
-                    ;; добавялем в спсиок тех, кому надо отправить USDT за их BID, НО! 
-                    ;; добавляем ему не полный его BID, а только нужую для покрытия ASK часть, то есть iterable_ask_usdt_amount
-                    ( slice ctx_info, int exists ) = resulting_orders_dict.udict_get?(STD_ADDR_LEN, ctx_std_addr);
-                    if exists {
-                        int order_id = ctx_info~load_uint(ORDER_ID_LEN);
-                        int previous_coins_amount = ctx_info~load_coins();
-
-                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                            STD_ADDR_LEN, ctx_std_addr, 
-                            begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(iterable_ask_usdt_amount + previous_coins_amount)
-                        ); 
-
-                    } else {
-                        resulting_orders_dict = resulting_orders_dict.udict_set_builder(
-                            STD_ADDR_LEN, ctx_std_addr, 
-                            begin_cell().store_uint(BID_ID, ORDER_ID_LEN).store_coins(iterable_ask_usdt_amount)
-                        ); 
-                    }
-
-                    ;; мы не удаляем текущий BID, а просто его уменьшаем на iterable_ask_usdt_amount, который "откусили" от него, и конвертируем обратно в INDEX
-                    int rem_index_amount = get_index(converted_ctx_index_bid_amount  - iterable_ask_usdt_amount);
-                    ctx_bids = ctx_bids.udict_set_builder(
-                        ASKS_BIDS_ID_LEN, pivot_id, begin_cell().store_coins(rem_index_amount).store_slice(ctx_addr)
-                    ); 
-
-                    ;; уменьшаем объём ask'a (обнуляем)
-                    iterable_ask_usdt_amount -= iterable_ask_usdt_amount;
-
-                    pack_asks_bids(ctx_priority, asks, ctx_bids);
-
-                    ;; выходим из цикла, так как мы уже покрыли ASK
-                    success = FALSE;
-                    ;; заканчиваем и глобальный цикл, который перебирает приоритеты
-                    ctx_priority = PRIORITIES_NUMBER + ANSWER_CONSTANT;
                 }
             }
                 
@@ -267,7 +285,7 @@
 }
 
 
-() add_ask( int priority, slice ask_address, int ask_jetton_amount, int qi ) impure {
+() add_ask( int priority, slice ask_address, int ask_jetton_amount, int offer_ts_price, int qi ) impure {
     glob::asks_counter += 1;
 
     throw_unless(error::min_ask, ask_jetton_amount >= MIN_USDT_ASK);
@@ -279,7 +297,7 @@
 
     cell resulting_orders_dict = new_dict();
 
-    ( resulting_orders_dict, int remaining_ask_amount ) = check_bids(resulting_orders_dict, ask_jetton_amount);
+    ( resulting_orders_dict, int remaining_ask_amount ) = check_bids(resulting_orders_dict, ask_jetton_amount, offer_ts_price);
 
     ( _, int ask_address_std ) = parse_std_addr(ask_address);
 
@@ -308,14 +326,14 @@
 
         asks = asks.udict_set_builder(
             ASKS_BIDS_ID_LEN, glob::asks_counter, 
-            begin_cell().store_coins(ctx_ask_amount).store_slice(ask_address)
+            begin_cell().store_coins(ctx_ask_amount).store_slice(ask_address).store_uint(offer_ts_price, TS_PRICE_LEN)
         ); 
         pack_asks_bids(priority, asks, bids);
     }
 
     ifnot resulting_orders_dict.dict_empty?() == TRUE { ;; если после попытки разрешить ASK словарь сделок не пустой, тогда исполянем всё, что там есть
         ;; также добавляем в словарь сделок, которые надо исполнить того, кто сделал ASK. отдаём ему INDEX за его USDT, которые удалось прокрыть BID'ами при изначальной проверке
-        int index_amount_to_asker = get_index(ask_jetton_amount - remaining_ask_amount); 
+        int index_amount_to_asker = get_index(ask_jetton_amount - remaining_ask_amount, offer_ts_price); 
         resulting_orders_dict = resulting_orders_dict.udict_set_builder(
             STD_ADDR_LEN, ask_address_std, 
             begin_cell().store_uint(ASK_ID, ORDER_ID_LEN).store_coins(index_amount_to_asker)
@@ -325,14 +343,14 @@
     }
 }
 
-() add_bid( int priority, slice bid_address, int bid_index_amount, int qi ) impure {
+() add_bid( int priority, slice bid_address, int bid_index_amount, int offer_ts_price, int qi ) impure {
     glob::bids_counter += 1;
 
     glob::index_jetton_balance += bid_index_amount;
 
     cell resulting_orders_dict = new_dict();
-
-    ( resulting_orders_dict, int remaining_bid_amount ) = check_asks(resulting_orders_dict, bid_index_amount);
+    
+    ( resulting_orders_dict, int remaining_bid_amount ) = check_asks(resulting_orders_dict, bid_index_amount, offer_ts_price);
 
     ( _, int bid_address_std ) = parse_std_addr(bid_address);
 
@@ -360,7 +378,7 @@
 
         bids = bids.udict_set_builder(
             ASKS_BIDS_ID_LEN, glob::bids_counter,  
-            begin_cell().store_coins(ctx_bid_amount).store_slice(bid_address)
+            begin_cell().store_coins(ctx_bid_amount).store_slice(bid_address).store_uint(offer_ts_price, TS_PRICE_LEN)
         ); 
         pack_asks_bids(priority, asks, bids);
     }
@@ -368,7 +386,7 @@
     ifnot resulting_orders_dict.dict_empty?() == TRUE {
 
         ;; Сохраняем amount, который нужно перебить, а не по факту
-        int usdt_amount_to_bider = get_usdt(bid_index_amount - remaining_bid_amount); 
+        int usdt_amount_to_bider = get_usdt(bid_index_amount - remaining_bid_amount, offer_ts_price); 
     
         resulting_orders_dict = resulting_orders_dict.udict_set_builder(
             STD_ADDR_LEN, bid_address_std, 

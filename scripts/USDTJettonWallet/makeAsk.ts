@@ -15,6 +15,11 @@ const ORDER_BOOK_ADMIN_MNEMONIC = process.env.ORDER_BOOK_ADMIN_MNEMONIC as strin
 const PRIORITY: number = 1;
 const USDT_AMOUNT: number = 1.2;
 
+const TSP_DIVIDER: number = 1000;
+
+// Цена, которую климент выбирает в UI, цена должна быть внутри текущего диапазона цен
+const PRICE_WITHIN_RANGE: number = 1.5;
+
 export async function run(provider: NetworkProvider) {
     
     const orderBook = provider.open(OrderBook.createFromAddress(Address.parse(ORDER_BOOK_ADDRESS)));
@@ -39,6 +44,7 @@ export async function run(provider: NetworkProvider) {
                 .storeUint(seqno, 32)
                 .storeUint(0x845746, 32)
                 .storeUint(PRIORITY, 16) 
+                .storeUint(PRICE_WITHIN_RANGE * TSP_DIVIDER, 32)
             .endCell()
         ),
         secretKey: keyPair.secretKey,
