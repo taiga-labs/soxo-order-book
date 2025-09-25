@@ -91,7 +91,8 @@ export class OrderBook implements Contract {
         opts: {
             value: bigint;
             qi: bigint;
-            newTradingSessionPrice: bigint;
+            newTradingSessionPriceMin: bigint;
+            newTradingSessionPriceMax: bigint;
         }
     ) {
         await provider.internal(via, {
@@ -101,7 +102,8 @@ export class OrderBook implements Contract {
                 beginCell()
                     .storeUint(0xbb35443b, 32)
                     .storeUint(opts.qi, 64)
-                    .storeCoins(opts.newTradingSessionPrice)
+                    .storeCoins(opts.newTradingSessionPriceMin)
+                    .storeCoins(opts.newTradingSessionPriceMax)
                 .endCell(),
         });
     }
@@ -207,9 +209,10 @@ export class OrderBook implements Contract {
         return res.stack.readCellOpt();
     }
 
-    async getPrices(provider: ContractProvider): Promise<[bigint, bigint, bigint]> {
+    async getPrices(provider: ContractProvider): Promise<[bigint, bigint, bigint, bigint]> {
         let res = await provider.get('get_order_book_prices', []);
         return [
+            res.stack.readBigNumber(),
             res.stack.readBigNumber(),
             res.stack.readBigNumber(),
             res.stack.readBigNumber()

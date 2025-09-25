@@ -12,7 +12,9 @@ global slice glob::index_master_address;
 
 global int glob::usdt_balance;
 global int glob::index_jetton_balance;
-global int glob::trading_session_price; ;; * 1000
+
+global int glob::trading_session_price_min;
+global int glob::trading_session_price_max;
 
 global int glob::asks_counter;
 global int glob::bids_counter;
@@ -21,6 +23,7 @@ global int glob::ffreeze;
 
 global int glob::admin_pbk;
 global int glob::seqno;
+
 
 int load_globals( ) impure {
     slice smc_storage =         get_data().begin_parse();
@@ -35,46 +38,48 @@ int load_globals( ) impure {
     init::book_minter_address = addrs1~load_msg_addr();
 
     if (smc_storage.slice_bits() > 0) | (smc_storage.slice_refs() > 0) {
-        slice addrs2 =                addrs_ref~load_ref().begin_parse();
-        glob::usdt_wallet_address =   addrs2~load_msg_addr();
-        glob::index_wallet_address =  addrs2~load_msg_addr();
+        slice addrs2 =                    addrs_ref~load_ref().begin_parse();
+        glob::usdt_wallet_address =       addrs2~load_msg_addr();
+        glob::index_wallet_address =      addrs2~load_msg_addr();
 
-        glob::porder_queues =         smc_storage~load_dict();
+        glob::porder_queues =             smc_storage~load_dict();
 
-        slice jw_addresses =          smc_storage~load_ref().begin_parse();
-        glob::usdt_master_address =   jw_addresses~load_msg_addr();
-        glob::index_master_address =  jw_addresses~load_msg_addr();
+        slice jw_addresses =              smc_storage~load_ref().begin_parse();
+        glob::usdt_master_address =       jw_addresses~load_msg_addr();
+        glob::index_master_address =      jw_addresses~load_msg_addr();
+  
+        slice conis_info =                jw_addresses~load_ref().begin_parse();
+        glob::usdt_balance =              conis_info~load_coins();
+        glob::index_jetton_balance =      conis_info~load_coins();
+        glob::trading_session_price_min = conis_info~load_coins();
+        glob::trading_session_price_max = conis_info~load_coins();
+        glob::asks_counter =              conis_info~load_uint(ASKS_BIDS_NUMBER_LEN);
+        glob::bids_counter =              conis_info~load_uint(ASKS_BIDS_NUMBER_LEN);
 
-        slice conis_info =            jw_addresses~load_ref().begin_parse();
-        glob::usdt_balance =          conis_info~load_coins();
-        glob::index_jetton_balance =  conis_info~load_coins();
-        glob::trading_session_price = conis_info~load_coins();
-        glob::asks_counter =          conis_info~load_uint(ASKS_BIDS_NUMBER_LEN);
-        glob::bids_counter =          conis_info~load_uint(ASKS_BIDS_NUMBER_LEN);
-
-        slice sign_info =             smc_storage~load_ref().begin_parse();
-        glob::seqno =                 sign_info~load_uint(32);
-        glob::admin_pbk =             sign_info~load_uint(256);
+        slice sign_info =                 smc_storage~load_ref().begin_parse();
+        glob::seqno =                     sign_info~load_uint(32);
+        glob::admin_pbk =                 sign_info~load_uint(256);
 
         return TRUE;
     } else {
-        glob::usdt_wallet_address =   null();
-        glob::index_wallet_address =  null();
+        glob::usdt_wallet_address =       null();
+        glob::index_wallet_address =      null();
 
-        glob::porder_queues =         null();
+        glob::porder_queues =             null();
 
-        glob::usdt_master_address =   null();
-        glob::index_master_address =  null();
+        glob::usdt_master_address =       null();
+        glob::index_master_address =      null();
 
-        glob::usdt_balance =          null();
-        glob::index_jetton_balance =  null();
-        glob::trading_session_price = null();
+        glob::usdt_balance =              null();
+        glob::index_jetton_balance =      null();
+        glob::trading_session_price_min = null();
+        glob::trading_session_price_max = null();
 
-        glob::asks_counter =          null();
-        glob::bids_counter =          null();
+        glob::asks_counter =               null();
+        glob::bids_counter =               null();
 
-        glob::seqno =                 null();
-        glob::admin_pbk =             null();
+        glob::seqno =                      null();
+        glob::admin_pbk =                  null();
 
         return FALSE;
     }
@@ -113,7 +118,8 @@ int load_globals( ) impure {
                         begin_cell()
                             .store_coins(glob::usdt_balance)
                             .store_coins(glob::index_jetton_balance)
-                            .store_coins(glob::trading_session_price)
+                            .store_coins(glob::trading_session_price_min)
+                            .store_coins(glob::trading_session_price_max)
                             .store_uint(glob::asks_counter, ASKS_BIDS_NUMBER_LEN)
                             .store_uint(glob::bids_counter, ASKS_BIDS_NUMBER_LEN)
                         .end_cell()

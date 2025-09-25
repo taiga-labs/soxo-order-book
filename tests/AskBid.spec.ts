@@ -26,6 +26,7 @@ function getStdAddress(address: Address) {
             .storeAddress(address)
         .endCell().beginParse().skip(11).loadUintBig(256))
 }
+
 describe('BookMinter', () => {
     let bookMinterCode: Cell;
     let orderBookCode: Cell

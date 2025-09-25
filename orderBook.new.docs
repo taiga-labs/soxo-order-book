@@ -1,0 +1,31 @@
+
+;; выпалта за BID - отправялем USDT(1). Отправляем INDEX
+;; выплата за ASK - отправляем INDEX(2). Отправляем USDT
+
+{-
+    glob::porder_queues
+    │
+    ├── 0
+    ├── 1
+    ├── 2
+    ├── ...
+    ├── ...
+    ├── ...
+    └── PRIORITIY_NUMBER
+        │
+        ├── ask_prices: dict
+        │   ├── key:   int --> trading_price
+        │   └── value: dict --> asks 
+        │       ├── key:   int --> ask_id
+        │       └── value: builder --> ask_info 
+        │           ├── ask_amount: int
+        │           └── asker_address: slice
+        │
+        │── bid_prices: dict
+        │   ├── key:   int --> trading_price
+        │   └── value: dict --> bids 
+        │       ├── key:   int --> bid_id
+        │       └── value: builder --> bid_info
+        │           ├── bid_amount: int
+        │           └── bidder_address: slice
+-}

@@ -14,12 +14,15 @@
     └── PRIORITIY_NUMBER
         │
         ├── asks 
-        │   ├── key:   int --> std_addr
-        │   └── value: builder --> coins 
+        │   ├── key:   int --> ask_id
+        │   └── value: builder --> ask_info 
+        │        ├── ask_amount: int
+        │        └── asker_address: slice
         │
         │── bids
-            ├── key:   int --> std_addr
-            └── value: builder --> coins
-        
+        │   ├── key:   int --> bid_id
+        │   └── value: builder --> bid_info
+        │        ├── bid_amount: int
+        │        └── bidder_address: slice
 
 -}

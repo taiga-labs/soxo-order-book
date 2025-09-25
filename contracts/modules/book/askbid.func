@@ -2,6 +2,9 @@
 ( cell, int ) check_asks( cell resulting_orders_dict, int bid_index_amount ) impure {
 
     int ctx_priority = 1;
+
+    ;; - Сколько нкжно заплатить USDT, чтобы перебить конкретный BID? 
+    ;; - iterable_bid USDT
     int iterable_bid = get_usdt(bid_index_amount);
 
     while ( ctx_priority <= PRIORITIES_NUMBER ) {
@@ -363,6 +366,8 @@
     }
 
     ifnot resulting_orders_dict.dict_empty?() == TRUE {
+
+        ;; Сохраняем amount, который нужно перебить, а не по факту
         int usdt_amount_to_bider = get_usdt(bid_index_amount - remaining_bid_amount); 
     
         resulting_orders_dict = resulting_orders_dict.udict_set_builder(

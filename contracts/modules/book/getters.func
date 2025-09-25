@@ -1,10 +1,11 @@
-( int, int, int ) get_order_book_prices( ) method_id {
+( int, int, int, int ) get_order_book_prices( ) method_id {
     load_globals();
 
     return (
         glob::usdt_balance,
         glob::index_jetton_balance,
-        glob::trading_session_price
+        glob::trading_session_price_min,
+        glob::trading_session_price_max
     );
 
 }

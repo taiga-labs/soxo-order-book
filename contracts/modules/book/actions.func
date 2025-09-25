@@ -3,11 +3,12 @@
     glob::porder_queues = new_dict(); 
     init_order_queues();
 
-    glob::usdt_master_address    = in_msg_body~load_msg_addr();
-    glob::index_master_address   = in_msg_body~load_msg_addr();
-    glob::usdt_balance           = 0;
-    glob::index_jetton_balance   = 0;
-    glob::trading_session_price  = 0;
+    glob::usdt_master_address       = in_msg_body~load_msg_addr();
+    glob::index_master_address      = in_msg_body~load_msg_addr();
+    glob::usdt_balance              = 0;
+    glob::index_jetton_balance      = 0;
+    glob::trading_session_price_min = 0;
+    glob::trading_session_price_max = 0;
 
     glob::asks_counter =          0;
     glob::bids_counter =          0;
@@ -126,7 +127,9 @@
 int action::admin_actions(slice in_msg_body, int op_code, slice sender_address) impure inline {
      if op_code == op::ob::recv_new_session {
         throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
-        glob::trading_session_price = in_msg_body~load_coins();
+        glob::trading_session_price_min = in_msg_body~load_coins();
+        glob::trading_session_price_max = in_msg_body~load_coins();
+        
         return 0;
     }
 

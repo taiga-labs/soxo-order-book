@@ -9,19 +9,19 @@ const ORDER_BOOK_ADDRESS = process.env.ORDER_BOOK_ADDRESS as string;
 
 export type orderInfoType = {
     orderAmount: bigint; 
-    stdAddr: bigint
+    addr: Address
 }
 
 export const orderDictionaryValue: DictionaryValue<orderInfoType> = {
     serialize(src, builder) {    
         builder.storeCoins(src.orderAmount)
-        builder.storeUint(src.stdAddr, 256)
+        builder.storeAddress(src.addr)
     },
 
     parse(src) {
         return {
             orderAmount: src.loadCoins(),
-            stdAddr:  BigInt(src.loadUintBig(256))
+            addr:  src.loadAddress()
         }
     },
 }
@@ -46,16 +46,6 @@ export const asksBidsDictionaryValue: DictionaryValue<asksBidsInfoType> = {
     },
 }
 
-function getAddress(addressUint: bigint): Address {
-    return (
-        beginCell()
-            .storeUint(2, 2)
-            .storeUint(0, 1)
-            .storeUint(0, 8)
-            .storeUint(addressUint, 256)
-        .endCell().beginParse().loadAddress()
-    )
-}
 
 export async function run(provider: NetworkProvider) {
     const orderBook = provider.open(OrderBook.createFromAddress(Address.parse(ORDER_BOOK_ADDRESS)));
@@ -64,46 +54,37 @@ export async function run(provider: NetworkProvider) {
     let pordersDict = Dictionary.loadDirect(Dictionary.Keys.Uint(16), asksBidsDictionaryValue, porderQueues);
 
 
-    const orders: asksBidsInfoType | undefined = pordersDict.get(1)
-    
-    console.log("-----------[ ASKS ]-----------")
-    console.log(orders?.asks.keys())
-    console.log(orders?.asks.values())
-
-    console.log("-----------[ BIDS ]-----------")
-    console.log(orders?.bids.keys())
-    console.log(orders?.bids.values())
-
-
-    // for (let iter: number = 1; iter <= pordersDict.size; iter++) {
-    //     console.log(`Priority ${iter}:`)
-    //     ordersCtxInfo = pordersDict.get(iter);
+    for (let iter: number = 1; iter <= pordersDict.size; iter++) {
+        console.log(`Priority ${iter}:`)
+        let ordersCtxInfo = pordersDict.get(iter);
         
-    //     if (ordersCtxInfo?.asks_number as number > 0) {
-    //         console.log(`\tASKS number: ${ordersCtxInfo?.asks_number}`);
-    //         console.log(`\tASKS:`)
-            
-    //         let asksCtxKeys = ordersCtxInfo?.asks.keys() as bigint[]
-    //         let asksCtxValues = ordersCtxInfo?.asks.values() as orderInfoType[]
-    //         for (let jter: number = 0; jter < (ordersCtxInfo?.asks_number as number); jter += 1) {
-    //             console.log(`\t\tASK ${jter + 1}:`)
-    //             console.log("\t\t\t[ ASK ID ]: ", asksCtxKeys[jter])
-    //             console.log("\t\t\t[ user address ]: ", getAddress(asksCtxValues[jter].stdAddr).toString())
-    //             console.log("\t\t\t[ user ASK volume ]: ", Number(asksCtxValues[jter].orderAmount) / 10 ** 9, "USDT\n")
-    //         }
-    //     }
+        if (ordersCtxInfo?.asks.size as number > 0) {
+            console.log(`\tASKS:`)
 
-    //     if (ordersCtxInfo?.bids_number as number > 0) {
-    //         console.log(`\tBIDS number: ${ordersCtxInfo?.bids_number}`);
-    //         console.log(`\tBIDS:`)
-    //         let bidsCtxKeys = ordersCtxInfo?.bids.keys() as bigint[]
-    //         let bidsCtxValues = ordersCtxInfo?.bids.values() as orderInfoType[]
-    //         for (let jter: number = 0; jter < (ordersCtxInfo?.bids_number as number); jter += 1) {
-    //             console.log(`\t\tBID ${jter + 1}:`)
-    //             console.log("\t\t\t[ BID ID ]: ", bidsCtxKeys[jter])
-    //             console.log("\t\t\t[ user address ]: ", getAddress(bidsCtxValues[jter].stdAddr).toString())
-    //             console.log("\t\t\t[ user ASK volume ]: ", Number(bidsCtxValues[jter].orderAmount) / 10 ** 9, "INDEX\n")
-    //         }
-    //     }
-    // }
+            let asks: Dictionary<bigint, orderInfoType> = ordersCtxInfo?.asks as Dictionary<bigint, orderInfoType>
+        
+            let askIndex = 1;
+            for (const [index, askInfo] of asks) {
+                console.log(`\t\tASK ${askIndex}:`);
+                console.log("\t\t\t[ index ]: ", index);
+                console.log("\t\t\t[ user address ]: ", askInfo.addr.toString());
+                console.log("\t\t\t[ user ASK volume ]: ", Number(askInfo.orderAmount) / 10 ** 9, "USDT\n");
+                askIndex++;
+            }
+        }
+
+        if (ordersCtxInfo?.bids.size as number > 0) {
+            console.log(`\tBIDS:`)
+            let bids: Dictionary<bigint, orderInfoType> = ordersCtxInfo?.bids as Dictionary<bigint, orderInfoType>
+           
+           let bidIndex = 1;
+            for (const [index, bidInfo] of bids) {
+                console.log(`\t\tBID ${bidIndex}:`);
+                console.log("\t\t\t[ index ]: ", index);
+                console.log("\t\t\t[ user address ]: ", bidInfo.addr.toString());
+                console.log("\t\t\t[ user BID volume ]: ", Number(bidInfo.orderAmount) / 10 ** 9, "INIDEX\n");
+                bidIndex++;
+            }
+        }
+    }
 }
