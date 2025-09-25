@@ -16,7 +16,7 @@ const ORDER_BOOK_ADMIN_MNEMONIC = process.env.ORDER_BOOK_ADMIN_MNEMONIC as strin
 const PRIORITY: number = 1;
 const INDEX_AMOUNT = 3;
 
-const TSP_DIVIDER: number = 1000;
+const TSP_DIVIDER: number = 10000;
 
 // Цена, которую климент выбирает в UI, цена должна быть внутри текущего диапазона цен
 const PRICE_WITHIN_RANGE: number = 1.5;

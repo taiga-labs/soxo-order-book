@@ -235,7 +235,7 @@ describe('BookMinter', () => {
             success: true,
         });
 
-        const TSP_DIVIDER: bigint = 1000n;
+        const TSP_DIVIDER: bigint = 10000n;
 
         // Set Trading Session Price! ----------------------------------------------------------------------------------------------
         const TSPSettingResult = await SCorderBook.sendNewSession(ACTAdmin.getSender(), {
@@ -377,7 +377,7 @@ describe('BookMinter', () => {
             success: true,
         });
 
-        const TSP_DIVIDER: bigint = 1000n;
+        const TSP_DIVIDER: bigint = 10000n;
 
         // Set Trading Session Price! ----------------------------------------------------------------------------------------------
         const TSPSettingResult = await SCorderBook.sendNewSession(ACTAdmin.getSender(), {
