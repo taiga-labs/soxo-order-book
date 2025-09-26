@@ -15,3 +15,4 @@ const int error::priority_queues_extract = 510;
 const int error::invalid_signature       = 603;
 const int error::invalid_seqno           = 604;
 const int error:ts_price_out_of_range    = 701;
+const int error::not_an_action_id =        813;

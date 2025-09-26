@@ -1,4 +1,3 @@
-
 () action::init(slice in_msg_body, int op_code) impure inline {
     glob::porder_queues = new_dict(); 
     init_order_queues();
@@ -92,7 +91,7 @@
         glob::index_jetton_balance -= jetton_amount;
         throw_unless(error::not_exists_while_cancel, exists?);
        
-        send_jetton_order(user_address, jetton_amount, query_id, ASK_ID, SEND_MODE_PAY_FEES_SEPARATELY);
+        send_jetton_order(user_address, jetton_amount, query_id, ASK_ID, SEND_MODE_PAY_FEES_SEPARATELY, action::id::cnacel_order);
         pack_asks_bids(priority, asks, bids);
 
     } elseif askbid? == ASK_ID {
@@ -120,7 +119,7 @@
 
         glob::usdt_balance -= jetton_amount;
 
-        send_jetton_order(user_address, jetton_amount, query_id, BID_ID, SEND_MODE_PAY_FEES_SEPARATELY);
+        send_jetton_order(user_address, jetton_amount, query_id, BID_ID, SEND_MODE_PAY_FEES_SEPARATELY, action::id::cnacel_order);
         pack_asks_bids(priority, asks, bids);
 
     } else {
@@ -132,8 +131,8 @@
 int action::admin_actions(slice in_msg_body, int op_code, slice sender_address) impure inline {
      if op_code == op::ob::recv_new_session {
         throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
-        glob::trading_session_price_min = in_msg_body~load_coins();
-        glob::trading_session_price_max = in_msg_body~load_coins();
+        glob::trading_session_price_min = in_msg_body~load_uint(TS_PRICE_LEN);
+        glob::trading_session_price_max = in_msg_body~load_uint(TS_PRICE_LEN);
         
         return 0;
     }

@@ -102,8 +102,8 @@ export class OrderBook implements Contract {
                 beginCell()
                     .storeUint(0xbb35443b, 32)
                     .storeUint(opts.qi, 64)
-                    .storeCoins(opts.newTradingSessionPriceMin)
-                    .storeCoins(opts.newTradingSessionPriceMax)
+                    .storeUint(opts.newTradingSessionPriceMin, 32)
+                    .storeUint(opts.newTradingSessionPriceMax, 32)
                 .endCell(),
         });
     }

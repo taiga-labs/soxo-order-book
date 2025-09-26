@@ -1,4 +1,5 @@
-
+const int action::id::cnacel_order = 12;
+const int action::id::order_execution = 13;
 
 const int FFREZE_LEN =           4;
 const int ORDER_ID_LEN =         4;
