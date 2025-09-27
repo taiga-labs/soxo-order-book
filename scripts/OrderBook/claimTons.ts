@@ -11,7 +11,7 @@ export async function run(provider: NetworkProvider) {
     await orderBook.sendClaimTons(provider.sender(), {
         value: toNano('0.05'),
         qi: BigInt(Math.floor(Date.now() / 1000)),
-        amount: toNano('0.3'),
+        amount: toNano('0.6'),
         toAddress: provider.sender().address as Address
     });
 }

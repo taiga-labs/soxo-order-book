@@ -10,18 +10,20 @@ const ORDER_BOOK_ADDRESS = process.env.ORDER_BOOK_ADDRESS as string;
 export type orderInfoType = {
     orderAmount: bigint; 
     addr: Address
+    offerTsPrice: number
 }
 
 export const orderDictionaryValue: DictionaryValue<orderInfoType> = {
     serialize(src, builder) {    
         builder.storeCoins(src.orderAmount)
         builder.storeAddress(src.addr)
+        builder.storeUint(src.offerTsPrice, 32)
     },
-
     parse(src) {
         return {
             orderAmount: src.loadCoins(),
-            addr:  src.loadAddress()
+            addr:  src.loadAddress(),
+            offerTsPrice: src.loadUint(32),
         }
     },
 }
@@ -68,6 +70,7 @@ export async function run(provider: NetworkProvider) {
                 console.log(`\t\tASK ${askIndex}:`);
                 console.log("\t\t\t[ index ]: ", index);
                 console.log("\t\t\t[ user address ]: ", askInfo.addr.toString());
+                console.log("\t\t\t[ user ASK OFFER PRICE ]: ", Number(askInfo.offerTsPrice) / 10 ** 4, "USDT FOR ONE INDEX");
                 console.log("\t\t\t[ user ASK volume ]: ", Number(askInfo.orderAmount) / 10 ** 9, "USDT\n");
                 askIndex++;
             }
@@ -82,6 +85,7 @@ export async function run(provider: NetworkProvider) {
                 console.log(`\t\tBID ${bidIndex}:`);
                 console.log("\t\t\t[ index ]: ", index);
                 console.log("\t\t\t[ user address ]: ", bidInfo.addr.toString());
+                console.log("\t\t\t[ user ASK OFFER PRICE ]: ", Number(bidInfo.offerTsPrice) / 10 ** 4, "USDT FOR ONE INDEX");
                 console.log("\t\t\t[ user BID volume ]: ", Number(bidInfo.orderAmount) / 10 ** 9, "INIDEX\n");
                 bidIndex++;
             }

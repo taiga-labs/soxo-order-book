@@ -14,12 +14,12 @@ const ORDER_BOOK_ADDRESS = process.env.ORDER_BOOK_ADDRESS as string;
 const ORDER_BOOK_ADMIN_MNEMONIC = process.env.ORDER_BOOK_ADMIN_MNEMONIC as string;
 
 const PRIORITY: number = 1;
-const INDEX_AMOUNT = 3;
+const INDEX_AMOUNT = 1.7;
 
 const TSP_DIVIDER: number = 10000;
 
 // Цена, которую климент выбирает в UI, цена должна быть внутри текущего диапазона цен
-const PRICE_WITHIN_RANGE: number = 1.5;
+const PRICE_WITHIN_RANGE: number = 0.6;
 
 export async function run(provider: NetworkProvider) {
     const orderBook = provider.open(OrderBook.createFromAddress(Address.parse(ORDER_BOOK_ADDRESS)));

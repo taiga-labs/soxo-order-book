@@ -20,12 +20,12 @@ export async function run(provider: NetworkProvider) {
     let seqno = await orderBook.getSeqno()
     
     await orderBook.sendCancelOrder(provider.sender(), {
-        value: toNano('0.7'),
+        value: toNano('0.5'),
         qi: BigInt(Math.floor(Date.now() / 1000)),
         secretKey: keyPair.secretKey,
         seqno: seqno,
         priority: 1,
         orderType: BID_ID,
-        userAddress: Address.parse("UQCRCFxjEaauB2sVdeOvrXAkuYaHGxSg84NC5lLmMcIjovpb")
+        userAddress: provider.sender().address as Address
     });
 }

@@ -91,8 +91,8 @@ export class OrderBook implements Contract {
         opts: {
             value: bigint;
             qi: bigint;
-            newTradingSessionPriceMin: bigint;
-            newTradingSessionPriceMax: bigint;
+            newTradingSessionPriceMin: number;
+            newTradingSessionPriceMax: number;
         }
     ) {
         await provider.internal(via, {
@@ -144,6 +144,24 @@ export class OrderBook implements Contract {
                     .storeUint(opts.qi, 64)
                     .storeCoins(opts.usdt)
                     .storeCoins(opts.index)
+                .endCell(),
+        });
+    }
+
+
+    async sendResetOrdersInfo(provider: ContractProvider, via: Sender, 
+        opts: {
+            value: bigint;
+            qi: bigint;
+        }
+    ) {
+        await provider.internal(via, {
+            value: opts.value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(0x46778, 32)
+                    .storeUint(opts.qi, 64)
                 .endCell(),
         });
     }
@@ -204,18 +222,39 @@ export class OrderBook implements Contract {
         });
     }
 
+
+    async sendGetTON(provider: ContractProvider, via: Sender, 
+        opts: {
+            value: bigint;
+            qi: bigint;
+        }
+    ) {
+
+        await provider.internal(via, {
+            value: opts.value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(4242, 32)
+                    .storeUint(opts.qi, 64)
+                    .storeUint(0, 8)
+                    .storeRef(beginCell().endCell())
+                .endCell(),
+        });
+    }
+
     async getPorderQueues(provider: ContractProvider): Promise<Cell | null> {
         let res = await provider.get('get_porder_queues', []);
         return res.stack.readCellOpt();
     }
 
-    async getPrices(provider: ContractProvider): Promise<[bigint, bigint, bigint, bigint]> {
+    async getPrices(provider: ContractProvider): Promise<[bigint, bigint, number, number]> {
         let res = await provider.get('get_order_book_prices', []);
         return [
             res.stack.readBigNumber(),
             res.stack.readBigNumber(),
-            res.stack.readBigNumber(),
-            res.stack.readBigNumber()
+            res.stack.readNumber(),
+            res.stack.readNumber()
         ]
     }
 

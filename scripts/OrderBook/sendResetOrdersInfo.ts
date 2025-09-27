@@ -6,14 +6,10 @@ import { compile, NetworkProvider } from '@ton/blueprint';
 dotenv.config();
 const ORDER_BOOK_ADDRESS = process.env.ORDER_BOOK_ADDRESS as string;
 
-const TSP_DIVIDER: number = 10000;
-
 export async function run(provider: NetworkProvider) {
     const orderBook = provider.open(OrderBook.createFromAddress(Address.parse(ORDER_BOOK_ADDRESS)));
-    await orderBook.sendNewSession(provider.sender(), {
-        value: toNano('0.01'),
+    await orderBook.sendResetOrdersInfo(provider.sender(), {
+        value: toNano('0.05'),
         qi: BigInt(Math.floor(Date.now() / 1000)),
-        newTradingSessionPriceMin: 0.5 * TSP_DIVIDER,
-        newTradingSessionPriceMax: 6 * TSP_DIVIDER
     });
 }

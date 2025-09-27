@@ -144,6 +144,14 @@ int action::admin_actions(slice in_msg_body, int op_code, slice sender_address) 
         return 0;
     }
 
+
+    if op_code == op::ob::reset_orders_info {
+        throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
+        glob::porder_queues = new_dict(); 
+        init_order_queues();
+        return 0;
+    }
+
     if op_code == op::ob::freeze {
         throw_unless(error::forbitten, equal_slices_bits(sender_address, init::admin_address));
         glob::ffreeze = in_msg_body~load_int(FFREZE_LEN);
