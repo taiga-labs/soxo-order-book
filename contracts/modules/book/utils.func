@@ -10,23 +10,21 @@ slice construct_slice_addr( int std_addr ) inline {
 }
 
 ( cell, cell ) extract_asks_bids( int priority ) impure inline {
-    (cell ctx_priority_queues, int ok?) = glob::porder_queues.udict_get_ref?(ORDER_QUEUES_KEY_LEN, priority);
+    (slice ctx_priority_queues, int ok?) = glob::porder_queues.udict_get?(ORDER_QUEUES_KEY_LEN, priority);
     throw_unless(error::priority_queues_extract, ok?);
-    slice src_slice = ctx_priority_queues.begin_parse();
     return (
-        src_slice~load_dict(), 
-        src_slice~load_dict()
+        ctx_priority_queues~load_dict(), 
+        ctx_priority_queues~load_dict()
         
     );
 }
 
 () pack_asks_bids( int priority, cell asks, cell bids ) impure inline {
-    glob::porder_queues = glob::porder_queues.udict_set_ref(
+    glob::porder_queues = glob::porder_queues.udict_set_builder(
         ORDER_QUEUES_KEY_LEN, priority,
             begin_cell()
                 .store_dict(asks)
                 .store_dict(bids)
-            .end_cell()
     );
 }
 
@@ -37,33 +35,3 @@ int get_usdt( int index_amount, int ctx_ts_price ) inline {
 int get_index( int usdt_amount, int ctx_ts_price ) inline {
     return ((usdt_amount * TSP_DIVIDER) / ctx_ts_price);
 }
-
-;; slice construct_slice_addr( int std_addr ) inline {
-;;     return (
-;;         begin_cell()
-;;             .store_uint(2, 2) 
-;;             .store_uint(0, 1) 
-;;             .store_uint(BASECHAIN, 8) 
-;;             .store_uint(std_addr, STD_ADDR_LEN)
-;;         .end_cell().begin_parse()
-;;     );
-;; }
-
-;; ( cell, cell ) extract_asks_bids( int priority ) impure inline {
-;;     (slice ctx_priority_queues, int ok?) = glob::porder_queues.udict_get?(ORDER_QUEUES_KEY_LEN, priority);
-;;     throw_unless(error::priority_queues_extract, ok?);
-;;     return (
-;;         ctx_priority_queues~load_dict(), 
-;;         ctx_priority_queues~load_dict()
-        
-;;     );
-;; }
-
-;; () pack_asks_bids( int priority, cell asks, cell bids ) impure inline {
-;;     glob::porder_queues = glob::porder_queues.udict_set_builder(
-;;         ORDER_QUEUES_KEY_LEN, priority,
-;;             begin_cell()
-;;                 .store_dict(asks)
-;;                 .store_dict(bids)
-;;     );
-;; }
