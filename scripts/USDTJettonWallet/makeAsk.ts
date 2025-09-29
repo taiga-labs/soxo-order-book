@@ -18,7 +18,7 @@ const USDT_AMOUNT: number = 1;
 const TSP_DIVIDER: number = 10000;
 
 // Цена, которую климент выбирает в UI, цена должна быть внутри текущего диапазона цен
-const PRICE_WITHIN_RANGE: number = 0.6;
+const PRICE_WITHIN_RANGE: number = 1;
 
 export async function run(provider: NetworkProvider) {
     

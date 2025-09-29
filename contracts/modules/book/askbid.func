@@ -1,6 +1,6 @@
 ;; Второй аргумент в check - это сколько осталось от суммы ордера после первичной проверки
 
-( cell, int ) check_asks( cell resulting_orders_dict, int bid_index_amount, int offer_ts_price ) impure {
+( cell, int ) check_asks( cell resulting_orders_dict, int bid_index_amount, int offer_ts_price, slice bid_address ) impure {
 
     int ctx_priority = 1;
 
@@ -22,7 +22,7 @@
                 ;; Если цена BID из текущего диапазона совпадает с ASK'ом, который мы хотим покрыть - идём дальше
                 ;; Иначе берём другой ASK
                 
-                if (ctx_ts_price == offer_ts_price) {
+                if ((ctx_ts_price == offer_ts_price) & (~ equal_slices_bits(bid_address, ctx_addr))) {
 
                     (_, int ctx_std_addr) = parse_std_addr(ctx_addr);
 
@@ -130,7 +130,7 @@
 ;; тут разраешются ASK(запрос покупки INDEX за USDT), то есть на выходе в 
 ;; идеальном случае тому, кто сделал ASK - перейдут INDEX, а всем BID, которые этот ASK покрыли - USDT
 
-( cell, int ) check_bids( cell resulting_orders_dict, int ask_usdt_amount, int offer_ts_price ) impure {
+( cell, int ) check_bids( cell resulting_orders_dict, int ask_usdt_amount, int offer_ts_price, slice ask_address ) impure {
 
     int ctx_priority = 1;
     int iterable_ask_usdt_amount = ask_usdt_amount;
@@ -157,7 +157,7 @@
                 ;; Если цена ASK из текущего диапазона совпадает с BID'ом, который мы хотим покрыть - идём дальше
                 ;; Иначе берём другой BID
                 
-                if (offer_ts_price = ctx_ts_price) {
+                if ((ctx_ts_price == offer_ts_price) & (~ equal_slices_bits(ask_address, ctx_addr))) {
 
                     (_, int ctx_std_addr) = parse_std_addr(ctx_addr);
 
@@ -297,7 +297,7 @@
 
     cell resulting_orders_dict = new_dict();
 
-    ( resulting_orders_dict, int remaining_ask_amount ) = check_bids(resulting_orders_dict, ask_jetton_amount, offer_ts_price);
+    ( resulting_orders_dict, int remaining_ask_amount ) = check_bids(resulting_orders_dict, ask_jetton_amount, offer_ts_price, ask_address);
 
     ( _, int ask_address_std ) = parse_std_addr(ask_address);
 
@@ -350,7 +350,7 @@
 
     cell resulting_orders_dict = new_dict();
     
-    ( resulting_orders_dict, int remaining_bid_amount ) = check_asks(resulting_orders_dict, bid_index_amount, offer_ts_price);
+    ( resulting_orders_dict, int remaining_bid_amount ) = check_asks(resulting_orders_dict, bid_index_amount, offer_ts_price, bid_address);
 
     ( _, int bid_address_std ) = parse_std_addr(bid_address);
 
