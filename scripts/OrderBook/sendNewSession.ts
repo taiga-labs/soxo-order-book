@@ -13,7 +13,7 @@ export async function run(provider: NetworkProvider) {
     await orderBook.sendNewSession(provider.sender(), {
         value: toNano('0.01'),
         qi: BigInt(Math.floor(Date.now() / 1000)),
-        newTradingSessionPriceMin: 0.5 * TSP_DIVIDER,
-        newTradingSessionPriceMax: 6 * TSP_DIVIDER
+        newTradingSessionPriceMin: 1 * TSP_DIVIDER,
+        newTradingSessionPriceMax: 2 * TSP_DIVIDER
     });
 }

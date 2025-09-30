@@ -25,7 +25,8 @@ export async function run(provider: NetworkProvider) {
         secretKey: keyPair.secretKey,
         seqno: seqno,
         priority: 1,
-        orderType: BID_ID,
+        orderType: ASK_ID,
         userAddress: provider.sender().address as Address
     });
 }
+
