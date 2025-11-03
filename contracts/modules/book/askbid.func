@@ -22,7 +22,7 @@
                 ;; Если цена BID из текущего диапазона совпадает с ASK'ом, который мы хотим покрыть - идём дальше
                 ;; Иначе берём другой ASK
                 
-                if ((ctx_ts_price == offer_ts_price) & (~ equal_slices_bits(bid_address, ctx_addr))) {
+                if (ctx_ts_price == offer_ts_price) {-& (~ equal_slices_bits(bid_address, ctx_addr)))-} {
 
                     (_, int ctx_std_addr) = parse_std_addr(ctx_addr);
 
@@ -157,7 +157,7 @@
                 ;; Если цена ASK из текущего диапазона совпадает с BID'ом, который мы хотим покрыть - идём дальше
                 ;; Иначе берём другой BID
                 
-                if ((ctx_ts_price == offer_ts_price) & (~ equal_slices_bits(ask_address, ctx_addr))) {
+                if (ctx_ts_price == offer_ts_price) {-& equal_slices_bits(ask_address, ctx_addr)))-} {
 
                     (_, int ctx_std_addr) = parse_std_addr(ctx_addr);
 
@@ -309,15 +309,20 @@
         int success = TRUE;
         int pivot_id = -1;
 
+        int ctx_order_id = glob::asks_counter;
+
         ;; CHECK EXISTENCE
         do {
             ( pivot_id, slice ask_info, success ) = asks.udict_get_next?(ASKS_BIDS_ID_LEN, pivot_id);
             if success {
                 int old_ask_amount = ask_info~load_coins();
                 slice addr = ask_info~load_msg_addr();
-                if equal_slices_bits(addr, ask_address) {  
+                int old_offer_ts_price = ask_info~load_uint(32);
+
+                if equal_slices_bits(addr, ask_address) & (old_offer_ts_price == offer_ts_price) {  
                     ctx_ask_amount += old_ask_amount;
                     success = FALSE;
+                    ctx_order_id = pivot_id;
                     ( asks, _, int suc ) = asks.udict_delete_get?(ASKS_BIDS_ID_LEN, pivot_id);
                     throw_unless(error:no_comments, suc);
                 }
@@ -325,7 +330,7 @@
         } until (~ success);
 
         asks = asks.udict_set_builder(
-            ASKS_BIDS_ID_LEN, glob::asks_counter, 
+            ASKS_BIDS_ID_LEN, ctx_order_id, {-glob::asks_counter,-}
             begin_cell().store_coins(ctx_ask_amount).store_slice(ask_address).store_uint(offer_ts_price, TS_PRICE_LEN)
         ); 
         pack_asks_bids(priority, asks, bids);
@@ -361,15 +366,20 @@
         int success = TRUE;
         int pivot_id = -1;
 
+        int ctx_order_id = glob::bids_counter;
+
         ;; CHECK EXISTENCE
         do {
             ( pivot_id, slice bid_info, success ) = bids.udict_get_next?(ASKS_BIDS_ID_LEN, pivot_id);
             if success {
                 int old_bid_amount = bid_info~load_coins();
                 slice addr = bid_info~load_msg_addr();
-                if equal_slices_bits(addr, bid_address) {  
+                int old_offer_ts_price = bid_info~load_uint(32);
+
+                if equal_slices_bits(addr, bid_address) & (old_offer_ts_price == offer_ts_price) {  
                     ctx_bid_amount += old_bid_amount;
                     success = FALSE;
+                    ctx_order_id = pivot_id;
                     ( bids, _, int suc ) = bids.udict_delete_get?(ASKS_BIDS_ID_LEN, pivot_id);
                     throw_unless(error:no_comments, suc);
                 }
@@ -377,7 +387,7 @@
         } until (~ success);
 
         bids = bids.udict_set_builder(
-            ASKS_BIDS_ID_LEN, glob::bids_counter,  
+            ASKS_BIDS_ID_LEN, ctx_order_id,{-glob::bids_counter, -}
             begin_cell().store_coins(ctx_bid_amount).store_slice(bid_address).store_uint(offer_ts_price, TS_PRICE_LEN)
         ); 
         pack_asks_bids(priority, asks, bids);

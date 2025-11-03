@@ -137,6 +137,8 @@ describe('BookMinter', () => {
             owner_address: ACTAdmin.address,
             admin_address: ACTAdmin.address,
             book_minter_address: SCbookMinter.address,
+            indexMasterAddress: SCindexMinter.address,
+            usdtMasterAddress: SCusdtMinter.address,
         }, orderBookCode));
 
         // BOB AND HIS USDT WALLET ----------------------------------------------------------------------------------------------
@@ -241,13 +243,11 @@ describe('BookMinter', () => {
             forwardTONAmount: toNano("0.065"),
             forwardPayload: (
                 beginCell()
-                    .storeUint(await SCorderBook.getSeqno(), 32)
                     .storeUint(0x845746, 32)
                     .storeUint(BOBS_PRIORITY, 16)
                     .storeUint(10 * TSP_DIVIDER, 32)
                 .endCell()
             ),
-            secretKey: OBAkeyPair.secretKey,
         })
 
         // От Боба её USDT jetton wallet

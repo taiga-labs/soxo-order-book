@@ -14,12 +14,12 @@ const ORDER_BOOK_ADDRESS = process.env.ORDER_BOOK_ADDRESS as string;
 const ORDER_BOOK_ADMIN_MNEMONIC = process.env.ORDER_BOOK_ADMIN_MNEMONIC as string;
 
 const PRIORITY: number = 1;
-const INDEX_AMOUNT = 2;
+const INDEX_AMOUNT = 3;
 
 const TSP_DIVIDER: number = 10000;
 
 // Цена, которую климент выбирает в UI, цена должна быть внутри текущего диапазона цен
-const PRICE_WITHIN_RANGE: number = 2.27;
+const PRICE_WITHIN_RANGE: number = 1.3;
 
 export async function run(provider: NetworkProvider) {
     const orderBook = provider.open(OrderBook.createFromAddress(Address.parse(ORDER_BOOK_ADDRESS)));
@@ -42,12 +42,10 @@ export async function run(provider: NetworkProvider) {
         forwardTONAmount: toNano("0.1"),
         forwardPayload: (
             beginCell()
-                .storeUint(seqno, 32)
                 .storeUint(0xbf4385, 32)
                 .storeUint(PRIORITY, 16) 
                 .storeUint(PRICE_WITHIN_RANGE * TSP_DIVIDER, 32)
             .endCell()
         ),
-        secretKey: keyPair.secretKey,
     })
 }

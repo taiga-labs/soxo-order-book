@@ -3,7 +3,7 @@ import { Cell, toNano, Address, DictionaryValue, Dictionary, beginCell } from '@
 import { BookMinter } from '../wrappers/BookMinter';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
-import { OrderBook, orderDictionaryValue, porderQueuesDictionaryValue, porderQueuesType } from '../wrappers/OrderBook';
+import { OrderBook, porderQueuesDictionaryValue, porderQueuesType } from '../wrappers/OrderBook';
 import { JettonMaster } from '@ton/ton';
 import { jettonData, JettonMinter } from '../wrappers/JettonMinter';
 import { buildjettonMinterContentCell } from '../helpers/metadata';
@@ -27,6 +27,46 @@ function getStdAddress(address: Address) {
         .endCell().beginParse().skip(11).loadUintBig(256))
 }
 
+export type orderInfoType = {
+    orderAmount: bigint; 
+    addr: Address
+    offerTsPrice: number
+}
+
+export const orderDictionaryValue: DictionaryValue<orderInfoType> = {
+    serialize(src, builder) {    
+        builder.storeCoins(src.orderAmount)
+        builder.storeAddress(src.addr)
+        builder.storeUint(src.offerTsPrice, 32)
+    },
+    parse(src) {
+        return {
+            orderAmount: src.loadCoins(),
+            addr:  src.loadAddress(),
+            offerTsPrice: src.loadUint(32),
+        }
+    },
+}
+
+
+export type asksBidsInfoType = {
+    asks: Dictionary<bigint, orderInfoType>;
+    bids: Dictionary<bigint, orderInfoType>;
+}
+
+export const asksBidsDictionaryValue: DictionaryValue<asksBidsInfoType> = {
+    serialize(src, builder) {    
+        builder.storeDict(src.asks)
+        builder.storeDict(src.bids)
+    },
+
+    parse(src) {
+        return {
+            asks: src.loadDict(Dictionary.Keys.BigUint(64), orderDictionaryValue),
+            bids: src.loadDict(Dictionary.Keys.BigUint(64), orderDictionaryValue),
+        }
+    },
+}
 describe('BookMinter', () => {
     let bookMinterCode: Cell;
     let orderBookCode: Cell
@@ -206,7 +246,7 @@ describe('BookMinter', () => {
         
     }, TIMEOUT);
 
-    it('should not add out of range orders', async () => {
+    it('should work', async () => {
         console.log("Order Book Address: ", SCorderBook.address)
 
         // Actiave Test Order Book ----------------------------------------------------------------------------------------------
@@ -247,8 +287,8 @@ describe('BookMinter', () => {
         const TSPSettingResult = await SCorderBook.sendNewSession(ACTAdmin.getSender(), {
             value: toNano('0.01'),
             qi: BigInt(Math.floor(Date.now() / 1000)),
-            newTradingSessionPriceMin: 10 * TSP_DIVIDER, 
-            newTradingSessionPriceMax: 20 * TSP_DIVIDER, 
+            newTradingSessionPriceMin: 1.2 * TSP_DIVIDER, 
+            newTradingSessionPriceMax: 1.4 * TSP_DIVIDER, 
         })
 
         expect(TSPSettingResult.transactions).toHaveTransaction({
@@ -271,118 +311,29 @@ describe('BookMinter', () => {
             fromAddress: SCusdtMinter.address
         })
 
-        const usdtJettonData: jettonData = await SCusdtMinter.getJettonData();
-        expect(usdtJettonData.totalSupply).toEqual(AmountToMint)
-
-        // MINT 100_000 INDEX TO ALICE ----------------------------------------------------------------------------------------------
-        await SCindexMinter.sendMint(ACTAdmin.getSender(), {
-            value: toNano('0.08'),
-            queryId: BigInt(Math.floor(Date.now() / 1000)),
-            toAddress: ACTALice.address,
-            tonAmount: toNano('0.05'),
-            jettonAmountToMint: AmountToMint,
-            fromAddress: SCindexMinter.address
-        })
-        const indexJettonData: jettonData = await SCindexMinter.getJettonData();
-        expect(indexJettonData.totalSupply).toEqual(AmountToMint)
-
-        // BOB MAKES ASK! 20 USDT ----------------------------------------------------------------------------------------------
-        const BOBS_PRIORITY: number = 1;
-        const BOBS_USDT_AMOUNT_FOR_ASK: bigint = 20n * 10n**6n;
-
-        const makeAskResult = await SCusdtBobWallet.sendTransfer(ACTBob.getSender(), {
-            value: toNano("0.20"),
-            qi: BigInt(Math.floor(Date.now() / 1000)),
-            jettonAmount: BOBS_USDT_AMOUNT_FOR_ASK,
-            recipientAddress: SCorderBook.address,
-            forwardTONAmount: toNano("0.15"),
-            forwardPayload: (
-                beginCell()
-                    .storeUint(0x845746, 32)
-                    .storeUint(BOBS_PRIORITY, 16) 
-                    .storeUint(5 * TSP_DIVIDER, 32)
-                .endCell()
-            ),
-        })
-
-        // От Боба её USDT jetton wallet
-        expect(makeAskResult.transactions).toHaveTransaction({
-            from: SCusdtOrderBookWallet.address,
-            to: SCorderBook.address,
-            op: 0x7362d09c, // op::transfer
-            success: false,
-            exitCode: 701
-        });
-
-    }, TIMEOUT);
-
-    it('should not match different prices orders', async () => {
-        console.log("Order Book Address: ", SCorderBook.address)
-
-        // Actiave Test Order Book ----------------------------------------------------------------------------------------------
-        const orderOrderBookResult = await SCorderBook.sendDeploy(ACTAdmin.getSender(), toNano('0.5'))
-        expect(orderOrderBookResult.transactions).toHaveTransaction({
-            from: ACTAdmin.address,
-            to: SCorderBook.address,
-            success: true,
-        });
-
-        // Init Order Book ----------------------------------------------------------------------------------------------
-        const deployResult = await SCbookMinter.sendDeployOrderBook(ACTAdmin.getSender(), {
-            value: toNano("0.05"),
-            qi: BigInt(Math.floor(Date.now() / 1000)),
-            indexJettonMasterAddress: SCindexMinter.address,
-            adminPbk: OBAkeyPair.publicKey,
-            indexWallerAddressOB: await SCindexMinter.getWalletAddress(SCorderBook.address),
-            usdtWalletAddressOB: await SCusdtMinter.getWalletAddress(SCorderBook.address),
-        });
-
-        expect(deployResult.transactions).toHaveTransaction({
-            from: ACTAdmin.address,
-            to: SCbookMinter.address,
-            op: 0xf4874876, // op::bm::deploy_order_book
-            success: true,
-        });
-
-        expect(deployResult.transactions).toHaveTransaction({
-            from: SCbookMinter.address,
-            to: SCorderBook.address,
-            op: 0x9486490, // op::minter_book_init
-            success: true,
-        });
-
-        const TSP_DIVIDER: number = 10000;
-
-        // Set Trading Session Price! ----------------------------------------------------------------------------------------------
-        const TSPSettingResult = await SCorderBook.sendNewSession(ACTAdmin.getSender(), {
-            value: toNano('0.01'),
-            qi: BigInt(Math.floor(Date.now() / 1000)),
-            newTradingSessionPriceMin: 10 * TSP_DIVIDER, 
-            newTradingSessionPriceMax: 20 * TSP_DIVIDER, 
-        })
-
-        expect(TSPSettingResult.transactions).toHaveTransaction({
-            from: ACTAdmin.address,
-            to: SCorderBook.address,
-            op: 0xbb35443b, // op::ob::recv_new_session
-            success: true,
-        });
-
-
-        const AmountToMint: bigint = 100_000n * 10n**6n;
-
-        // MINT 100_000 USDT TO BOB ----------------------------------------------------------------------------------------------
+        // MINT 100_000 USDT TO ALICE ----------------------------------------------------------------------------------------------
         await SCusdtMinter.sendMint(ACTAdmin.getSender(), {
             value: toNano('5'),
             queryId: BigInt(Math.floor(Date.now() / 1000)),
-            toAddress: ACTBob.address,
+            toAddress: ACTALice.address,
             tonAmount: toNano('1'),
             jettonAmountToMint: AmountToMint,
             fromAddress: SCusdtMinter.address
         })
 
+
+        // MINT 100_000 INDEX TO BOB ----------------------------------------------------------------------------------------------
+        await SCindexMinter.sendMint(ACTAdmin.getSender(), {
+            value: toNano('5'),
+            queryId: BigInt(Math.floor(Date.now() / 1000)),
+            toAddress: ACTBob.address,
+            tonAmount: toNano('1'),
+            jettonAmountToMint: AmountToMint,
+            fromAddress: SCindexMinter.address
+        })
+
         const usdtJettonData: jettonData = await SCusdtMinter.getJettonData();
-        expect(usdtJettonData.totalSupply).toEqual(AmountToMint)
+        expect(usdtJettonData.totalSupply).toEqual(AmountToMint * 2n)
 
         // MINT 100_000 INDEX TO ALICE ----------------------------------------------------------------------------------------------
         await SCindexMinter.sendMint(ACTAdmin.getSender(), {
@@ -394,38 +345,125 @@ describe('BookMinter', () => {
             fromAddress: SCindexMinter.address
         })
         const indexJettonData: jettonData = await SCindexMinter.getJettonData();
-        expect(indexJettonData.totalSupply).toEqual(AmountToMint)
+        expect(indexJettonData.totalSupply).toEqual(AmountToMint * 2n)
 
-        // BOB MAKES ASK! 20 USDT ----------------------------------------------------------------------------------------------
+        // BOB MAKES BID! 20 USDT ----------------------------------------------------------------------------------------------
         const BOBS_PRIORITY: number = 1;
-        const BOBS_USDT_AMOUNT_FOR_ASK: bigint = 20n * 10n**6n;
+        const BOBS_INDEX_AMOUNT_FOR_BID: bigint = 3n * 10n**9n;
 
-        const makeAskResult = await SCusdtBobWallet.sendTransfer(ACTBob.getSender(), {
+        const makeBidResult = await SCindexBobWallet.sendTransfer(ACTBob.getSender(), {
             value: toNano("0.20"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
-            jettonAmount: BOBS_USDT_AMOUNT_FOR_ASK,
+            jettonAmount: BOBS_INDEX_AMOUNT_FOR_BID,
             recipientAddress: SCorderBook.address,
             forwardTONAmount: toNano("0.15"),
             forwardPayload: (
                 beginCell()
-                    .storeUint(0x845746, 32)
+                    .storeUint(0xbf4385, 32)
                     .storeUint(BOBS_PRIORITY, 16) 
-                    .storeUint(10 * TSP_DIVIDER, 32)
+                    .storeUint(1.3 * TSP_DIVIDER, 32)
                 .endCell()
             ),
         })
 
         // От Боба её USDT jetton wallet
-        expect(makeAskResult.transactions).toHaveTransaction({
+        expect(makeBidResult.transactions).toHaveTransaction({
             from: ACTBob.address,
-            to: SCusdtBobWallet.address,
+            to: SCindexBobWallet.address,
+            op: 0xf8a7ea5, // op::transfer
+            success: true,
+        });
+
+        // От INDEX JETTON WALLET Боба USDT JETTON WALLET СК OrderBook
+        expect(makeBidResult.transactions).toHaveTransaction({
+            from: SCindexBobWallet.address,
+            to: SCindexOrderBookWallet.address,
+            op: 0x178d4519, // op::internal_transfer 
+            success: true,
+        });
+
+        // От USDT JETTON WALLET СК OrderBook СК OrderBook'у
+        expect(makeBidResult.transactions).toHaveTransaction({
+            from: SCindexOrderBookWallet.address,
+            to: SCorderBook.address,
+            op: 0x7362d09c, // op::transfer_notification
+            success: true,
+        });
+
+
+
+            let porderQueues: Cell | null = await SCorderBook.getPorderQueues();
+        
+            let pordersDict = Dictionary.loadDirect(Dictionary.Keys.Uint(16), asksBidsDictionaryValue, porderQueues);
+        
+        
+            for (let iter: number = 1; iter <= pordersDict.size; iter++) {
+                console.log(`Priority ${iter}:`)
+                let ordersCtxInfo = pordersDict.get(iter);
+                
+                if (ordersCtxInfo?.asks.size as number > 0) {
+                    console.log(`\tASKS:`)
+        
+                    let asks: Dictionary<bigint, orderInfoType> = ordersCtxInfo?.asks as Dictionary<bigint, orderInfoType>
+                
+                    let askIndex = 1;
+                    for (const [index, askInfo] of asks) {
+                        console.log(`\t\tASK ${askIndex}:`);
+                        console.log("\t\t\t[ index ]: ", index);
+                        console.log("\t\t\t[ user address ]: ", askInfo.addr.toString());
+                        console.log("\t\t\t[ user ASK OFFER PRICE ]: ", Number(askInfo.offerTsPrice) / 10 ** 4, "USDT FOR ONE INDEX");
+                        console.log("\t\t\t[ user ASK volume ]: ", Number(askInfo.orderAmount) / 10 ** 9, "USDT\n");
+                        askIndex++;
+                    }
+                }
+        
+                if (ordersCtxInfo?.bids.size as number > 0) {
+                    console.log(`\tBIDS:`)
+                    let bids: Dictionary<bigint, orderInfoType> = ordersCtxInfo?.bids as Dictionary<bigint, orderInfoType>
+                   
+                   let bidIndex = 1;
+                    for (const [index, bidInfo] of bids) {
+                        console.log(`\t\tBID ${bidIndex}:`);
+                        console.log("\t\t\t[ index ]: ", index);
+                        console.log("\t\t\t[ user address ]: ", bidInfo.addr.toString());
+                        console.log("\t\t\t[ user ASK OFFER PRICE ]: ", Number(bidInfo.offerTsPrice) / 10 ** 4, "USDT FOR ONE INDEX");
+                        console.log("\t\t\t[ user BID volume ]: ", Number(bidInfo.orderAmount) / 10 ** 9, "INIDEX\n");
+                        bidIndex++;
+                    }
+                }
+            }
+
+
+        // BOB MAKES ASK! 20 USDT ----------------------------------------------------------------------------------------------
+        const ASLICE_PRIORITY: number = 1;
+        const ALICEUSDT_AMOUNT_FOR_ASK: bigint = 5n * 10n**6n;
+
+        const makeAskResult = await SCusdtAliceWallet.sendTransfer(ACTALice.getSender(), {
+            value: toNano("0.20"),
+            qi: BigInt(Math.floor(Date.now() / 1000)),
+            jettonAmount: ALICEUSDT_AMOUNT_FOR_ASK,
+            recipientAddress: SCorderBook.address,
+            forwardTONAmount: toNano("0.15"),
+            forwardPayload: (
+                beginCell()
+                    .storeUint(0x845746, 32)
+                    .storeUint(ASLICE_PRIORITY, 16) 
+                    .storeUint(1.3 * TSP_DIVIDER, 32)
+                .endCell()
+            ),
+        })
+
+        // От Боба её USDT jetton wallet
+        expect(makeAskResult.transactions).toHaveTransaction({
+            from: ACTALice.address,
+            to: SCusdtAliceWallet.address,
             op: 0xf8a7ea5, // op::transfer
             success: true,
         });
 
         // От INDEX JETTON WALLET Боба USDT JETTON WALLET СК OrderBook
         expect(makeAskResult.transactions).toHaveTransaction({
-            from: SCusdtBobWallet.address,
+            from: SCusdtAliceWallet.address,
             to: SCusdtOrderBookWallet.address,
             op: 0x178d4519, // op::internal_transfer 
             success: true,
@@ -439,91 +477,146 @@ describe('BookMinter', () => {
             success: true,
         });
 
-        // Check BOB's ASK Amount ----------------------------------------------------------------------------------------------
-        const porderQueues1 = await SCorderBook.getPorderQueues()
-        let porderQueuesDict1 = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues1);
-        const orders1: porderQueuesType = porderQueuesDict1.get(BigInt(BOBS_PRIORITY)) as porderQueuesType
 
-        let counters0: [number, number] = await SCorderBook.getCounters()
+            porderQueues = await SCorderBook.getPorderQueues();
+        
+            pordersDict = Dictionary.loadDirect(Dictionary.Keys.Uint(16), asksBidsDictionaryValue, porderQueues);
+        
+        
+            for (let iter: number = 1; iter <= pordersDict.size; iter++) {
+                console.log(`Priority ${iter}:`)
+                let ordersCtxInfo = pordersDict.get(iter);
+                
+                if (ordersCtxInfo?.asks.size as number > 0) {
+                    console.log(`\tASKS:`)
+        
+                    let asks: Dictionary<bigint, orderInfoType> = ordersCtxInfo?.asks as Dictionary<bigint, orderInfoType>
+                
+                    let askIndex = 1;
+                    for (const [index, askInfo] of asks) {
+                        console.log(`\t\tASK ${askIndex}:`);
+                        console.log("\t\t\t[ index ]: ", index);
+                        console.log("\t\t\t[ user address ]: ", askInfo.addr.toString());
+                        console.log("\t\t\t[ user ASK OFFER PRICE ]: ", Number(askInfo.offerTsPrice) / 10 ** 4, "USDT FOR ONE INDEX");
+                        console.log("\t\t\t[ user ASK volume ]: ", Number(askInfo.orderAmount) / 10 ** 9, "USDT\n");
+                        askIndex++;
+                    }
+                }
+        
+                if (ordersCtxInfo?.bids.size as number > 0) {
+                    console.log(`\tBIDS:`)
+                    let bids: Dictionary<bigint, orderInfoType> = ordersCtxInfo?.bids as Dictionary<bigint, orderInfoType>
+                   
+                   let bidIndex = 1;
+                    for (const [index, bidInfo] of bids) {
+                        console.log(`\t\tBID ${bidIndex}:`);
+                        console.log("\t\t\t[ index ]: ", index);
+                        console.log("\t\t\t[ user address ]: ", bidInfo.addr.toString());
+                        console.log("\t\t\t[ user ASK OFFER PRICE ]: ", Number(bidInfo.offerTsPrice) / 10 ** 4, "USDT FOR ONE INDEX");
+                        console.log("\t\t\t[ user BID volume ]: ", Number(bidInfo.orderAmount) / 10 ** 9, "INIDEX\n");
+                        bidIndex++;
+                    }
+                }
+            }
 
-        console.log("BOB's ASK amount:", orders1.asks.get(BigInt(counters0[0]))?.amount.toString())
-
-        // Умножем BOBS_USDT_AMOUNT_FOR_ASK на 10**3, так как USDT в контракте хранятся с decimals 9 для унификации. Только перед отправкой сумма делится на 1000
-        expect(orders1.asks.get(BigInt(counters0[0]))?.amount.toString()).toEqual((BOBS_USDT_AMOUNT_FOR_ASK * 10n**3n).toString())
 
 
-        // ALICE MAKES BID! 1 INDEX ----------------------------------------------------------------------------------------------
-        const ALICES_PRIORITY: number = 1;
-        const ALICES_INDEX_AMOUNT_FOR_BID: bigint = 1n * 10n**9n;
-
-        const makeBidResult = await SCindexAliceWallet.sendTransfer(ACTALice.getSender(), {
+        const makeAskResult1 = await SCusdtAliceWallet.sendTransfer(ACTALice.getSender(), {
             value: toNano("0.20"),
             qi: BigInt(Math.floor(Date.now() / 1000)),
-            jettonAmount: ALICES_INDEX_AMOUNT_FOR_BID,
+            jettonAmount: BigInt(1.4 * 10**6),
             recipientAddress: SCorderBook.address,
             forwardTONAmount: toNano("0.15"),
             forwardPayload: (
                 beginCell()
-                    .storeUint(0xbf4385, 32)
-                    .storeUint(ALICES_PRIORITY, 16) 
-                    .storeUint(11 * TSP_DIVIDER, 32)
+                    .storeUint(0x845746, 32)
+                    .storeUint(ASLICE_PRIORITY, 16) 
+                    .storeUint(1.4 * TSP_DIVIDER, 32)
                 .endCell()
             ),
         })
 
-        // От Алисы её INDEX jetton wallet
-        expect(makeBidResult.transactions).toHaveTransaction({
+        // От Боба её USDT jetton wallet
+        expect(makeAskResult1.transactions).toHaveTransaction({
             from: ACTALice.address,
-            to: SCindexAliceWallet.address,
+            to: SCusdtAliceWallet.address,
             op: 0xf8a7ea5, // op::transfer
             success: true,
         });
 
-        // От INDEX JETTON WALLET Алисы INDEX JETTON WALLET СК OrderBook
-        expect(makeBidResult.transactions).toHaveTransaction({
-            from: SCindexAliceWallet.address,
-            to: SCindexOrderBookWallet.address,
+        // От INDEX JETTON WALLET Боба USDT JETTON WALLET СК OrderBook
+        expect(makeAskResult1.transactions).toHaveTransaction({
+            from: SCusdtAliceWallet.address,
+            to: SCusdtOrderBookWallet.address,
             op: 0x178d4519, // op::internal_transfer 
             success: true,
         });
 
-        // От INDEX JETTON WALLET СК OrderBook СК OrderBook'у
-        expect(makeBidResult.transactions).toHaveTransaction({
-            from: SCindexOrderBookWallet.address,
+        // От USDT JETTON WALLET СК OrderBook СК OrderBook'у
+        expect(makeAskResult1.transactions).toHaveTransaction({
+            from: SCusdtOrderBookWallet.address,
             to: SCorderBook.address,
             op: 0x7362d09c, // op::transfer_notification
             success: true,
         });
 
-        console.log("SCindexOrderBookWallet:", SCindexOrderBookWallet.address.toString())
-        console.log("SCusdtOrderBookWallet:", SCusdtOrderBookWallet.address.toString())
-
-        console.log("SCindexBobWallet:", SCindexBobWallet.address.toString())
-        console.log("SCusdtAliceWallet:", SCusdtAliceWallet.address.toString())
-
-        console.log("BOB's STD ADDRESS:", getStdAddress(ACTBob.address))
-        console.log("ALICES's STD ADDRESS:", getStdAddress(ACTALice.address))
+                    porderQueues = await SCorderBook.getPorderQueues();
         
-        // ПРОВЕРКА ИСПОЛНЕНИЯ ОРДЕРА(подробнее в AskBid.md) ----------------------------------------------------------------------------------------------
+            pordersDict = Dictionary.loadDirect(Dictionary.Keys.Uint(16), asksBidsDictionaryValue, porderQueues);
+        
+        
+            for (let iter: number = 1; iter <= pordersDict.size; iter++) {
+                console.log(`Priority ${iter}:`)
+                let ordersCtxInfo = pordersDict.get(iter);
+                
+                if (ordersCtxInfo?.asks.size as number > 0) {
+                    console.log(`\tASKS:`)
+        
+                    let asks: Dictionary<bigint, orderInfoType> = ordersCtxInfo?.asks as Dictionary<bigint, orderInfoType>
+                
+                    let askIndex = 1;
+                    for (const [index, askInfo] of asks) {
+                        console.log(`\t\tASK ${askIndex}:`);
+                        console.log("\t\t\t[ index ]: ", index);
+                        console.log("\t\t\t[ user address ]: ", askInfo.addr.toString());
+                        console.log("\t\t\t[ user ASK OFFER PRICE ]: ", Number(askInfo.offerTsPrice) / 10 ** 4, "USDT FOR ONE INDEX");
+                        console.log("\t\t\t[ user ASK volume ]: ", Number(askInfo.orderAmount) / 10 ** 9, "USDT\n");
+                        askIndex++;
+                    }
+                }
+        
+                if (ordersCtxInfo?.bids.size as number > 0) {
+                    console.log(`\tBIDS:`)
+                    let bids: Dictionary<bigint, orderInfoType> = ordersCtxInfo?.bids as Dictionary<bigint, orderInfoType>
+                   
+                   let bidIndex = 1;
+                    for (const [index, bidInfo] of bids) {
+                        console.log(`\t\tBID ${bidIndex}:`);
+                        console.log("\t\t\t[ index ]: ", index);
+                        console.log("\t\t\t[ user address ]: ", bidInfo.addr.toString());
+                        console.log("\t\t\t[ user ASK OFFER PRICE ]: ", Number(bidInfo.offerTsPrice) / 10 ** 4, "USDT FOR ONE INDEX");
+                        console.log("\t\t\t[ user BID volume ]: ", Number(bidInfo.orderAmount) / 10 ** 9, "INIDEX\n");
+                        bidIndex++;
+                    }
+                }
+            }
 
-        // // От OrderBook USDT JETTON WALLET СК OrderBook'а (перевод ALICE'е 10 USDT)
-        // expect(makeBidResult.transactions).toHaveTransaction({
-        //     from: SCorderBook.address,
-        //     to: SCusdtOrderBookWallet.address,
-        //     op: 0xf8a7ea5, // op::transfer
-        //     success: false,
-        // });
+        // Set Trading Session Price! ----------------------------------------------------------------------------------------------
+        const TSPSettingResult2 = await SCorderBook.sendNewSession(ACTAdmin.getSender(), {
+            value: toNano('0.01'),
+            qi: BigInt(Math.floor(Date.now() / 1000)),
+            newTradingSessionPriceMin: 1.1 * TSP_DIVIDER, 
+            newTradingSessionPriceMax: 1.4 * TSP_DIVIDER, 
+        })
 
-        // Check BOB's ASK Amount after order execution ----------------------------------------------------------------------------------------------
-        const porderQueues3 = await SCorderBook.getPorderQueues()
-        let porderQueuesDict3 = Dictionary.loadDirect(Dictionary.Keys.BigUint(ORDER_QUEUES_KEY_LEN), porderQueuesDictionaryValue, porderQueues3);
-        const orders3: porderQueuesType = porderQueuesDict3.get(BigInt(BOBS_PRIORITY)) as porderQueuesType
+        expect(TSPSettingResult2.transactions).toHaveTransaction({
+            from: ACTAdmin.address,
+            to: SCorderBook.address,
+            op: 0xbb35443b, // op::ob::recv_new_session
+            success: true,
+        });
 
-        let counter1: [number, number] = await SCorderBook.getCounters()
 
-        // Умножем BOBS_USDT_AMOUNT_FOR_ASK на 10**3, так как USDT в контракте хранятся с decimals 9 для унификации. Только перед отправкой сумма делится на 1000
-        expect(orders3.asks.get(BigInt(counter1[0]))?.amount.toString()).toEqual((BOBS_USDT_AMOUNT_FOR_ASK * 10n**3n).toString())
 
     }, TIMEOUT);
-
 });

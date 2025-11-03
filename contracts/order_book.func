@@ -41,6 +41,7 @@
     }
 
     if op_code == op::jetton_transfer_notification { 
+        throw_unless(111, msg_value >= ONE_TONem1);
         action::jetton_transfer_notification(in_msg_body, msg_value, op_code, sender_address, query_id);
         set_globals();
         return ();

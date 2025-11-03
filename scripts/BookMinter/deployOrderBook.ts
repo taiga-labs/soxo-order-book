@@ -26,7 +26,9 @@ export async function run(provider: NetworkProvider) {
         ffreeze: 0,
         owner_address: provider.sender().address as  Address,
         admin_address: Address.parse(ADMIN_ADDRESS),
-        book_minter_address: Address.parse(BOOK_MINTER_ADDRESS)
+        book_minter_address: Address.parse(BOOK_MINTER_ADDRESS),
+        usdtMasterAddress: Address.parse(USDT_MASTER_ADDRESS),
+        indexMasterAddress: Address.parse(INDEX_MASTER_ADDRESS),
     }, await compile("OrderBook")))
 
     let indexWallerAddress = await indexMinter.getWalletAddress(orderBook.address)

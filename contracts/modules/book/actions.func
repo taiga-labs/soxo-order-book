@@ -2,8 +2,8 @@
     glob::porder_queues = new_dict(); 
     init_order_queues();
 
-    glob::usdt_master_address       = in_msg_body~load_msg_addr();
-    glob::index_master_address      = in_msg_body~load_msg_addr();
+    init::usdt_master_address       = in_msg_body~load_msg_addr();
+    init::index_master_address      = in_msg_body~load_msg_addr();
     glob::usdt_balance              = 0;
     glob::index_jetton_balance      = 0;
     glob::trading_session_price_min = 0;
@@ -29,11 +29,10 @@
     in_msg_body~skip_bits(BIT);
 
     slice inner_payload = in_msg_body~load_ref().begin_parse();
-    slice signed_slice = chek_sig(inner_payload);
 
-    int inner_op = signed_slice~load_op();
-    int priority = signed_slice~load_uint(PRIORITY_LEN);
-    int ctx_ts_price = signed_slice~load_uint(TS_PRICE_LEN);
+    int inner_op = inner_payload~load_op();
+    int priority = inner_payload~load_uint(PRIORITY_LEN);
+    int ctx_ts_price = inner_payload~load_uint(TS_PRICE_LEN);
 
     if ((ctx_ts_price < glob::trading_session_price_min) | (ctx_ts_price > glob::trading_session_price_max)) {
         throw(error:ts_price_out_of_range);
@@ -57,11 +56,11 @@
 
     throw_unless(error::less_ton, msg_value >= ONE_TONem7);
 
-    slice signed_slice = chek_sig(in_msg_body);
+    slice inner_payload = in_msg_body~load_ref().begin_parse();
 
-    int priority = signed_slice~load_uint(PRIORITY_LEN);
-    int askbid? = signed_slice~load_uint(ORDER_ID_LEN);
-    slice user_address = signed_slice~load_msg_addr();
+    int priority = inner_payload~load_uint(PRIORITY_LEN);
+    int askbid? = inner_payload~load_uint(ORDER_ID_LEN);
+    slice user_address = inner_payload~load_msg_addr();
 
     throw_unless(error::forbitten, equal_slices_bits(user_address, sender_address));
         

@@ -17,8 +17,8 @@
         init::admin_address,
         init::book_minter_address,
 
-        glob::usdt_master_address,
-        glob::index_master_address
+        init::usdt_master_address,
+        init::index_master_address
     );
 }
 

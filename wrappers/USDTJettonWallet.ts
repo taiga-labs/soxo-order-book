@@ -46,8 +46,7 @@ export class USDTJettonWallet implements Contract {
             jettonAmount: bigint
             forwardTONAmount: bigint,
             recipientAddress: Address,
-            forwardPayload: Cell | null,
-            secretKey: Buffer,
+            forwardPayload: Cell,
         }
     ) {
         let msgBody: Builder =                 
@@ -58,23 +57,25 @@ export class USDTJettonWallet implements Contract {
                 .storeAddress(opts.recipientAddress)
                 .storeUint(0, 2)
                 .storeUint(0, 1)
-                .storeCoins(opts.forwardTONAmount);
+                .storeCoins(opts.forwardTONAmount)
+                .storeUint(1, 1)
+                .storeRef(opts.forwardPayload)
         
-        if (opts.forwardPayload != null) {
-            let baseBody = opts.forwardPayload;
+        // if (opts.forwardPayload != null) {
+        //     let baseBody = opts.forwardPayload;
             
-            const signature: Buffer = sign(baseBody.hash(), opts.secretKey)
+        //     const signature: Buffer = sign(baseBody.hash(), opts.secretKey)
 
-            msgBody.storeBit(1).storeRef(
-                beginCell()
-                    .storeRef(baseBody)
-                    .storeBuffer(signature)
-                .endCell()
-            )
+        //     msgBody.storeBit(1).storeRef(
+        //         beginCell()
+        //             .storeRef(baseBody)
+        //             .storeBuffer(signature)
+        //         .endCell()
+        //     )
 
-        } else {
-            msgBody.storeBit(0)
-        }
+        // } else {
+        //     msgBody.storeBit(0)
+        // }
 
         
         await provider.internal(via, {
@@ -84,6 +85,7 @@ export class USDTJettonWallet implements Contract {
 
         });
     }
+
     
     async getJettonBalance(provider: ContractProvider) {
         let state = await provider.getState();

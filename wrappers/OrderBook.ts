@@ -45,6 +45,8 @@ export type OrderBookConfig = {
     owner_address: Address;
     admin_address: Address
     book_minter_address: Address;
+    indexMasterAddress: Address;
+    usdtMasterAddress: Address;
 };  
 
 export function orderBookConfigToCell(config: OrderBookConfig): Cell {
@@ -58,6 +60,12 @@ export function orderBookConfigToCell(config: OrderBookConfig): Cell {
                             .storeAddress(config.owner_address)
                             .storeAddress(config.admin_address)
                             .storeAddress(config.book_minter_address)
+                        .endCell()
+                    )
+                    .storeRef(
+                        beginCell()
+                            .storeAddress(config.usdtMasterAddress)
+                            .storeAddress(config.indexMasterAddress)
                         .endCell()
                     )
                 .endCell()
@@ -148,6 +156,23 @@ export class OrderBook implements Contract {
         });
     }
 
+    async sendResetOrderInfo(provider: ContractProvider, via: Sender, 
+        opts: {
+            value: bigint;
+            qi: bigint;
+        }
+    ) {
+        await provider.internal(via, {
+            value: opts.value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(0x46778, 32)
+                    .storeUint(opts.qi, 64)
+                .endCell(),
+        });
+    }
+
 
     async sendResetOrdersInfo(provider: ContractProvider, via: Sender, 
         opts: {
@@ -194,20 +219,15 @@ export class OrderBook implements Contract {
             priority: number;
             orderType: number;
             userAddress: Address;
-            seqno: number;
-            secretKey: Buffer;
         }
     ) {
 
         const baseBody: Cell = 
             beginCell()
-                .storeUint(opts.seqno, 32)
                 .storeUint(opts.priority, 16)
                 .storeUint(opts.orderType, 4)
                 .storeAddress(opts.userAddress)
             .endCell()
-
-        const signature: Buffer = sign(baseBody.hash(), opts.secretKey)
 
         await provider.internal(via, {
             value: opts.value,
@@ -217,16 +237,16 @@ export class OrderBook implements Contract {
                     .storeUint(0x3567, 32)
                     .storeUint(opts.qi, 64)
                     .storeRef(baseBody)
-                    .storeBuffer(signature)
                 .endCell(),
         });
     }
 
 
-    async sendGetTON(provider: ContractProvider, via: Sender, 
+    async sendMakeTx(provider: ContractProvider, via: Sender, 
         opts: {
             value: bigint;
             qi: bigint;
+            cell: Cell;
         }
     ) {
 
@@ -238,7 +258,7 @@ export class OrderBook implements Contract {
                     .storeUint(4242, 32)
                     .storeUint(opts.qi, 64)
                     .storeUint(0, 8)
-                    .storeRef(beginCell().endCell())
+                    .storeRef(opts.cell)
                 .endCell(),
         });
     }

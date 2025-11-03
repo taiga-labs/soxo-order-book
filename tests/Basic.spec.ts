@@ -132,6 +132,8 @@ describe('BookMinter', () => {
             owner_address: ACTAdmin.address,
             admin_address: ACTAdmin.address,
             book_minter_address: SCbookMinter.address,
+            indexMasterAddress: SCindexMinter.address,
+            usdtMasterAddress: SCusdtMinter.address,
         }, orderBookCode));
 
         // ALICE AND HER INDEX WALLET ----------------------------------------------------------------------------------------------
