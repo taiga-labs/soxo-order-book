@@ -66,6 +66,27 @@ export class JettonMinter implements Contract {
         });
     };
 
+    async sendUpgrade(provider: ContractProvider, via: Sender, 
+        oprions: {
+            value: bigint
+            queryId: bigint
+            newData: Cell
+            newCode: Cell
+        }
+    ) {
+        await provider.internal(via, {
+            value: oprions.value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: 
+                beginCell()
+                    .storeUint(5, 32)
+                    .storeUint(oprions.queryId, 64)
+                    .storeRef(oprions.newData)
+                    .storeRef(oprions.newCode)
+                .endCell(),
+        });
+    }
+
     async sendMint(provider: ContractProvider, via: Sender, 
         oprions: {
             value: bigint

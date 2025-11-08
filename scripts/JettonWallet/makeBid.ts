@@ -19,7 +19,7 @@ const INDEX_AMOUNT = 3;
 const TSP_DIVIDER: number = 10000;
 
 // Цена, которую климент выбирает в UI, цена должна быть внутри текущего диапазона цен
-const PRICE_WITHIN_RANGE: number = 1.3;
+const PRICE_WITHIN_RANGE: number = 1.35;
 
 export async function run(provider: NetworkProvider) {
     const orderBook = provider.open(OrderBook.createFromAddress(Address.parse(ORDER_BOOK_ADDRESS)));

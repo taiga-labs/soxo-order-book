@@ -39,6 +39,14 @@ int init?() method_id {
     );
 }
 
+(slice, slice) get_jws_addrs() method_id {
+    load_globals();
+    return (
+        glob::usdt_wallet_address,
+        glob::index_wallet_address
+    );
+}
+
 int get_seqno() method_id {
     load_globals();
     return glob::seqno;
